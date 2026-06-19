@@ -21,10 +21,7 @@ from boss_chess.variants import variant_label
 class TerminalGame:
     def __init__(self, config: GameConfig):
         self.config = config
-        self.state = GameState(
-            variant=config.variant.name.value,
-            chess960_seed=config.variant.chess960_seed,
-        )
+        self.state = GameState(variant=config.variant.name.value, chess960_seed=config.variant.chess960_seed)
         self.engine = self._build_engine()
         self.trainer = Trainer(self.engine)
         self.memes = MemeProvider()
@@ -97,9 +94,12 @@ class TerminalGame:
 
     def _mode_line(self) -> str:
         active = ["AI White" if self.ai_color == chess.WHITE else "AI Black"]
-        for flag, name in ((self.config.trainer, "Trainer"), (self.config.meme, "Meme"), (self.config.cheat, "Cheat")):
-            if flag:
-                active.append(name)
+        if self.config.trainer:
+            active.append("Trainer")
+        if self.config.meme:
+            active.append("Meme")
+        if self.config.cheat:
+            active.append("Cheat")
         if self.network is not None:
             active.append(f"Multiplayer ({self.config.multiplayer.mode})")
         return "Active: " + ", ".join(active)
@@ -140,9 +140,7 @@ class TerminalGame:
             if lower == "help":
                 self._help(); continue
             if lower == "new":
-                self._reset_game()
-                print("New game started.")
-                return
+                self._reset_game(); print("New game started."); return
             if lower == "undo":
                 self._undo(); return
             if lower == "fen":
@@ -181,8 +179,7 @@ class TerminalGame:
             if lower.startswith("importpgn"):
                 name = lower.split(maxsplit=1)[1] if " " in lower else ""
                 if not name:
-                    print("Usage: importpgn <name>")
-                    continue
+                    print("Usage: importpgn <name>"); continue
                 path = self._pgn_path(name)
                 if not path.exists():
                     print(f"No PGN found at {path.as_posix()}")
@@ -216,7 +213,6 @@ class TerminalGame:
             messages = self._apply_move(move, source="You", trainer=self.config.trainer, meme=self.config.meme, use_cheat=self.config.cheat and self.network is None)
             for message in messages:
                 print(message)
-
             if self.network is not None:
                 self.network.send_move(move)
             self._autosave(); return
@@ -234,8 +230,11 @@ class TerminalGame:
             print(f"Network error: {exc}")
             self.running = False
             return
-        messages = self._apply_move(move, source=self.network.peer_name, trainer=False, meme=False, use_cheat=False)
-        for message in messages:
+        if move not in self.state.board.legal_moves:
+            print(f"Remote sent an illegal move: {move.uci()}")
+            self.running = False
+            return
+        for message in self._apply_move(move, source=self.network.peer_name, trainer=False, meme=False, use_cheat=False):
             print(message)
 
     def _ai_turn(self) -> None:
@@ -248,7 +247,6 @@ class TerminalGame:
     def session_ai_turn(self) -> AiMoveOutcome | None:
         if self.state.board.is_game_over() or self.state.board.turn != self.ai_color:
             return None
-
         move = self.engine.pick_move(self.state.board)
         messages = self._apply_move(move, source="AI", trainer=self.config.trainer, meme=self.config.meme, use_cheat=self.config.cheat)
         return AiMoveOutcome(move=move, messages=messages, evaluation=self._current_eval())
@@ -272,7 +270,7 @@ class TerminalGame:
             messages.append(self.memes.get_context_line())
         if use_cheat:
             if not self.cheat.boss_intro_shown:
-                messages.extend(self.cheat.boss_banner())
+                self._print_boss_banner()
                 self.cheat.boss_intro_shown = True
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
