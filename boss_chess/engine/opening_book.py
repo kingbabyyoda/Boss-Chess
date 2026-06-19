@@ -28,6 +28,12 @@ OPENING_BOOK: dict[str, list[str]] = {
 class OpeningBook:
     enabled: bool = True
 
+    def position_key(self, board: chess.Board) -> str:
+        return _position_key(board)
+
+    def candidates_for_key(self, key: str) -> list[str]:
+        return list(OPENING_BOOK.get(key, []))
+
     def choose_move(self, board: chess.Board) -> chess.Move | None:
         if not self.enabled:
             return None
