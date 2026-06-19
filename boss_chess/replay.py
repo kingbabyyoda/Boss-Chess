@@ -8,6 +8,7 @@ import chess.pgn
 
 from boss_chess.state import GameState
 from boss_chess.types import GameVariant
+from boss_chess.variants import create_board
 
 
 @dataclass(slots=True)
@@ -48,7 +49,7 @@ def load_pgn(path: Path) -> GameState:
     variant = str(game.headers.get("Variant", GameVariant.STANDARD.value))
     chess960_seed = int(game.headers.get("Chess960Seed", 0) or 0)
     state = GameState(starting_fen=starting_fen, variant=variant, chess960_seed=chess960_seed)
-    board = chess.Board(starting_fen)
+    board = create_board(variant, starting_fen, chess960_seed)
     for move in game.mainline_moves():
         if move in board.legal_moves:
             state.push(move)
