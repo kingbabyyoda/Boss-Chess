@@ -24,12 +24,13 @@ FALLBACK_MEMES = [
 
 
 class MemeProvider:
-    def __init__(self, cache_path: Path | None = None, subreddit: str = "AnarchyChess") -> None:
-        self.reddit = RedditTitleFetcher(subreddit=subreddit)
+    def __init__(self, cache_path: Path | None = None, subreddit: str = "AnarchyChess", fetcher: RedditTitleFetcher | None = None, autoload: bool = True) -> None:
+        self.reddit = fetcher or RedditTitleFetcher(subreddit=subreddit)
         self.cache = MemeCache(path=cache_path or Path("saves") / "meme_cache.json")
-        self.cache.load()
-        if not self.cache.titles:
-            self.refresh()
+        if autoload:
+            self.cache.load()
+            if not self.cache.titles:
+                self.refresh()
 
     def get_meme(self) -> str:
         if self.cache.titles:
