@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
-try:
-    import requests
-except Exception:  # pragma: no cover
-    requests = None
+from boss_chess.memes.cache import MemeCache
+from boss_chess.memes.personalities import PERSONALITIES, PERSONALITY_INTROS, VOICE_TAGS
+from boss_chess.memes.reddit import RedditTitleFetcher
 
 FALLBACK_MEMES = [
     "Holy hell!",
@@ -14,56 +14,66 @@ FALLBACK_MEMES = [
     "Call the exorcist.",
     "New response just dropped.",
     "Brick the pipi.",
-]
-
-PERSONALITIES = [
-    "Anarchy Goblin",
-    "Grandmaster Menace",
-    "Bongcloud Prophet",
-    "Pipi Bricker",
+    "The knight has opinions.",
+    "Material is temporary.",
+    "The board is lying.",
+    "The eval bar trembles.",
+    "Premove into the void.",
+    "The king is on a spiritual journey.",
 ]
 
 
 class MemeProvider:
-    def __init__(self) -> None:
-        self.cache: list[str] = []
+    def __init__(self, cache_path: Path | None = None, subreddit: str = "AnarchyChess") -> None:
+        self.reddit = RedditTitleFetcher(subreddit=subreddit)
+        self.cache = MemeCache(path=cache_path or Path("saves") / "meme_cache.json")
+        self.cache.load()
+        if not self.cache.titles:
+            self.refresh()
 
     def get_meme(self) -> str:
-        if self.cache:
-            return random.choice(self.cache)
-
-        fetched = self._fetch_reddit_titles()
+        if self.cache.titles:
+            return random.choice(self.cache.titles)
+        fetched = self.refresh()
         if fetched:
-            self.cache = fetched
-            return random.choice(self.cache)
-
+            return random.choice(fetched)
         return random.choice(FALLBACK_MEMES)
 
     def personality(self) -> str:
         return random.choice(PERSONALITIES)
 
-    def _fetch_reddit_titles(self) -> list[str]:
-        if requests is None:
-            return []
+    def personality_intro(self, personality: str | None = None) -> str:
+        tag = personality or self.personality()
+        options = PERSONALITY_INTROS.get(tag, FALLBACK_MEMES)
+        return random.choice(options)
 
-        headers = {"User-Agent": "BossChess/0.1"}
-        urls = [
-            "https://www.reddit.com/r/AnarchyChess/hot.json?limit=20",
-            "https://www.reddit.com/r/AnarchyChess/top.json?t=day&limit=20",
-        ]
-        out: list[str] = []
+    def voice_tags(self) -> list[str]:
+        return list(VOICE_TAGS)
 
-        for url in urls:
-            try:
-                response = requests.get(url, headers=headers, timeout=4)
-                if response.status_code != 200:
-                    continue
-                payload = response.json()
-                for child in payload.get("data", {}).get("children", []):
-                    title = child.get("data", {}).get("title")
-                    if title and title not in out:
-                        out.append(title)
-            except Exception:
-                continue
+    def cached_titles(self) -> list[str]:
+        return list(self.cache.titles)
 
-        return out[:25]
+    def refresh(self) -> list[str]:
+        fetched = self.reddit.fetch_titles(limit=40)
+        if fetched:
+            self.cache.update(fetched, source=f"r/{self.reddit.subreddit}")
+            return fetched
+        if not self.cache.titles:
+            self.cache.update(FALLBACK_MEMES, source="fallback")
+        return list(self.cache.titles)
+
+    def source_label(self) -> str:
+        if self.cache.source.startswith("r/"):
+            return f"live {self.cache.source} cache"
+        return self.cache.source
+
+    def status_line(self) -> str:
+        if self.cache.titles:
+            return f"Meme feed: {self.source_label()} ({len(self.cache.titles)} titles cached)"
+        return "Meme feed: fallback"
+
+    def get_context_line(self) -> str:
+        personality = self.personality()
+        intro = self.personality_intro(personality)
+        title = self.get_meme()
+        return f"[{personality}] {intro} | {title}"
