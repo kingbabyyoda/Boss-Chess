@@ -67,7 +67,7 @@ class GuiSession:
         if self.state.board.is_check():
             lines.append("Check!")
         if self.config.cheat:
-            lines.append(self.cheat.boss_meter())
+            lines.extend(self.cheat.boss_banner())
             lines.append(f"Cheat: {self.cheat.last_event}")
             if self.cheat.event_log:
                 lines.append(f"Chaos log: {self.cheat.event_log[-1]}")
@@ -97,7 +97,7 @@ class GuiSession:
         if self.config.meme:
             messages.append(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
         if self.config.cheat and not self.cheat.boss_intro_shown:
-            messages.append(self.cheat.intro_line())
+            messages.extend(self.cheat.boss_banner())
             self.cheat.boss_intro_shown = True
         self._autosave()
         return "\n".join(messages) if messages else "Move played."
@@ -116,7 +116,7 @@ class GuiSession:
 
         if self.config.cheat:
             if not self.cheat.boss_intro_shown:
-                messages.append(self.cheat.intro_line())
+                messages.extend(self.cheat.boss_banner())
                 self.cheat.boss_intro_shown = True
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
