@@ -74,7 +74,7 @@ class StockfishAdapter:
             if not pv or score_obj is None:
                 continue
             move = pv[0]
-            score = _score_to_cp(score_obj)
+            score = _score_to_cp(score_obj, board.turn)
             lines.append((move, score))
 
         if not lines:
@@ -104,13 +104,15 @@ class StockfishAdapter:
             pass
 
 
-def _score_to_cp(score_obj: chess.engine.PovScore) -> int:
+def _score_to_cp(score_obj: chess.engine.PovScore, turn: chess.Color) -> int:
     try:
         if score_obj.is_mate():
             mate = score_obj.mate() or 0
-            return MATE_SCORE - abs(mate)
-        cp = score_obj.score(mate_score=MATE_SCORE)
-        return int(cp or 0)
+            base = MATE_SCORE - abs(mate)
+        else:
+            pov = score_obj.pov(turn)
+            base = int(pov.score(mate_score=MATE_SCORE) or 0)
+        return base if turn == chess.WHITE else -base
     except Exception:
         return 0
 
