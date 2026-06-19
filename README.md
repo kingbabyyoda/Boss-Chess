@@ -3,7 +3,7 @@
 A local Python chess project with four stacked modes and a polished graphical interface:
 
 - **Normal mode** — plays a solid game of chess.
-- **Trainer mode** — explains mistakes and suggests better moves.
+- **Trainer mode** — explains mistakes, recognizes openings, classifies tactical motifs, and generates reports.
 - **Meme mode** — adds AnarchyChess-style jokes, caches Reddit titles, and can pull live post titles from `r/AnarchyChess`.
 - **Cheat mode** — turns the AI into a boss fight with health, phases, and increasingly unfair abilities.
 - **GUI mode** — a tkinter desktop window with a clickable board, animations, captured pieces, evaluation bar, save/load controls, and live status panels.
@@ -20,6 +20,9 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Built-in opening book for early-game play
 - Heuristic evaluation with piece-square tables, king safety, mobility, and passed pawns
 - Trainer feedback loop
+- Opening recognition and tactical motif detection
+- Full game reports with accuracy and centipawn-loss summaries
+- Lesson and practice prompts with puzzle generation
 - Meme provider with live Reddit fetching and disk-backed cache
 - Meme personalities and context lines for the terminal and GUI
 - Boss-style cheat events
@@ -113,6 +116,14 @@ After your move, the trainer prints a short analysis:
 - move quality
 - estimated centipawn loss
 - a short explanation
+- opening name and plan
+- tactical motif label
+
+Trainer mode also supports:
+- game reports
+- lesson text
+- practice prompts
+- puzzle generation
 
 ### Meme
 Meme mode can:
@@ -162,6 +173,10 @@ Other commands:
 - `fen`
 - `eval`
 - `pgn`
+- `report`
+- `lesson`
+- `practice`
+- `puzzle`
 - `save <name>`
 - `load <name>`
 - `saves`
