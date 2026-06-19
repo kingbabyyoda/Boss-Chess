@@ -9,7 +9,9 @@ from boss_chess.engine.engine import ChessEngine
 from boss_chess.gui.session import AiMoveOutcome
 from boss_chess.memes.provider import MemeProvider
 from boss_chess.persistence import load_game, save_game
+from boss_chess.replay import export_pgn, load_pgn
 from boss_chess.state import GameState
+from boss_chess.stats import SessionStats
 from boss_chess.trainer.analysis import Trainer
 from boss_chess.types import GameConfig
 
@@ -22,6 +24,7 @@ class TerminalGame:
         self.trainer = Trainer(self.engine)
         self.memes = MemeProvider()
         self.cheat = CheatController()
+        self.stats = SessionStats()
         self.ai_color = chess.BLACK if not config.ai_plays_white else chess.WHITE
         self.running = True
         self.saves_dir = Path("saves")
@@ -132,6 +135,36 @@ class TerminalGame:
                 print(f"Target move: {prompt.target_move}")
                 print(f"Explanation: {prompt.explanation}")
                 continue
+            if lower == "stats":
+                print("\n".join(self.stats.summary_lines()))
+                unlocked = self.stats.unlocked_achievements()
+                if unlocked:
+                    print("Achievements:")
+                    for ach in unlocked:
+                        print(f"- {ach.title}: {ach.description}")
+                continue
+            if lower.startswith("exportpgn"):
+                name = lower.split(maxsplit=1)[1] if " " in lower else "replay"
+                path = self._export_pgn(name)
+                print(f"Exported PGN to {path.as_posix()}")
+                continue
+            if lower.startswith("importpgn"):
+                name = lower.split(maxsplit=1)[1] if " " in lower else ""
+                if not name:
+                    print("Usage: importpgn <name>")
+                    continue
+                path = self._pgn_path(name)
+                if not path.exists():
+                    print(f"No PGN found at {path.as_posix()}")
+                    continue
+                try:
+                    self.state = load_pgn(path)
+                    self.engine = self._build_engine()
+                    self.trainer = Trainer(self.engine)
+                    print(f"Loaded PGN {path.as_posix()}")
+                except Exception as exc:
+                    print(f"PGN import failed: {exc}")
+                return
             if lower in {"save", "load"}:
                 print(f"Usage: {lower} <name>"); continue
             if lower == "saves":
@@ -152,6 +185,7 @@ class TerminalGame:
             self.state.push(move)
             if captured:
                 self.cheat.note_capture(captured, self.ai_color)
+            self.stats.record_move(self.trainer.opening_recognizer.identify(list(board_before.move_stack)))
             if self.config.trainer:
                 print(self.trainer.review_move(board_before, move))
             if self.config.meme:
@@ -175,6 +209,7 @@ class TerminalGame:
         self.state.push(move)
         if captured:
             self.cheat.note_capture(captured, self.ai_color)
+        self.stats.record_move(self.trainer.opening_recognizer.identify(list(self.state.board.move_stack)))
         messages = [f"AI plays {move.uci()}"]
         if self.config.cheat:
             if not self.cheat.boss_intro_shown:
@@ -192,6 +227,7 @@ class TerminalGame:
             self.state.push(extra)
             if cap:
                 self.cheat.note_capture(cap, self.ai_color)
+            self.stats.record_move(self.trainer.opening_recognizer.identify(list(self.state.board.move_stack)))
             messages.append(f"AI steals another move: {extra.uci()}")
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
@@ -208,7 +244,9 @@ class TerminalGame:
             print("Draw by insufficient material.")
         else:
             print("Draw.")
-        print(f"Result: {self.state.board.result(claim_draw=True)}")
+        result = self.state.board.result(claim_draw=True)
+        print(f"Result: {result}")
+        self.stats.record_game_end(result, winner=chess.WHITE if result == "1-0" else chess.BLACK if result == "0-1" else None, checkmate=self.state.board.is_checkmate())
         if self.config.trainer:
             print(self.trainer.report_text(self.state.board))
 
@@ -217,7 +255,7 @@ class TerminalGame:
         self._autosave()
 
     def _help(self) -> None:
-        print("Commands: e2e4, undo, fen, pgn, eval, report, lesson, practice, puzzle, save <name>, load <name>, saves, new, modes, help, quit")
+        print("Commands: e2e4, undo, fen, pgn, eval, report, lesson, practice, puzzle, stats, exportpgn <name>, importpgn <name>, save <name>, load <name>, saves, new, modes, help, quit")
 
     def _parse_move(self, text: str) -> chess.Move | None:
         try:
@@ -267,3 +305,14 @@ class TerminalGame:
         best = analysis.best_move.uci() if analysis.best_move else "n/a"
         top = ", ".join(f"{move.uci()} ({score / 100:+.2f})" for move, score in analysis.top_lines) if analysis.top_lines else "n/a"
         return f"{analysis.summary}\nBest: {best}\nTop: {top}"
+
+    def _export_pgn(self, name: str) -> Path:
+        path = self._pgn_path(name)
+        export_pgn(self.state, path, headers={"Event": "Boss Chess", "White": "Human", "Black": "Engine"})
+        return path
+
+    def _pgn_path(self, name: str) -> Path:
+        clean = name.strip().replace("/", "_").replace("\\", "_")
+        if not clean.endswith(".pgn"):
+            clean += ".pgn"
+        return self.saves_dir / clean
