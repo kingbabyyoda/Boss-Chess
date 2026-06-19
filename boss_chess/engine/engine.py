@@ -56,9 +56,11 @@ class ChessEngine:
         return self.searcher.choose_move(board)
 
     def analyse(self, board: chess.Board, max_lines: int = 3) -> AnalysisResult:
+        line_count = max(1, min(max_lines, self.multi_pv))
+
         book_move = self.book.choose_move(board)
         if book_move is not None:
-            candidates = self._book_top_lines(board, max_lines=max_lines)
+            candidates = self._book_top_lines(board, max_lines=line_count)
             return AnalysisResult(
                 best_move=book_move,
                 best_score=0,
@@ -67,11 +69,11 @@ class ChessEngine:
             )
 
         if self.stockfish is not None:
-            result = self.stockfish.analyse(board, max_lines=max_lines)
+            result = self.stockfish.analyse(board, max_lines=line_count)
             if result is not None:
                 return result
 
-        bundle = analyse_position(board, depth=self.depth, max_lines=max_lines)
+        bundle = analyse_position(board, depth=self.depth, max_lines=line_count)
         return AnalysisResult(
             best_move=bundle.best_move,
             best_score=bundle.best_score,
