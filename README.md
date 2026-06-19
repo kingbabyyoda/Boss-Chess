@@ -29,6 +29,7 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Boss health, phase changes, boss meter, and boss HUD lines
 - Save-friendly architecture
 - PGN export/import helpers
+- Variant-aware PGN metadata
 - Session statistics and unlockable achievements
 - Opening explorer and release-candidate style settings dialog
 - Evaluation-history graph in the GUI
@@ -37,6 +38,8 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Captured pieces display
 - Evaluation bar
 - Sound feedback
+- Chess variants: Standard, Chess960, King of the Hill, Three-check, Atomic, Racing Kings
+- Terminal host/join multiplayer relay
 - Tests and GitHub Actions workflow
 
 ## Requirements
@@ -149,6 +152,18 @@ Cheat mode is meant for a local single-player boss fight. It can:
 - trigger a final-boss phase when the health bar gets low
 - show boss HUD lines with the boss name, phase name, and HP meter
 
+### Variants
+Boss Chess now supports several board types:
+- Standard
+- Chess960
+- King of the Hill
+- Three-check
+- Atomic
+- Racing Kings
+
+### Multiplayer
+Terminal mode includes a lightweight host/join relay for local-network matches. Multiplayer keeps the board and PGN state in sync and disables the local boss-cheat mode for fairness.
+
 ### GUI
 The GUI mode includes:
 - click-to-move board interaction
@@ -198,11 +213,11 @@ Other commands:
 
 ## Roadmap
 
+- Add richer online play features
 - Add endgame tablebases
-- Add puzzle mode
-- Add PGN import/export
+- Add tournament ladders
 - Add richer cheat events
-- Add persistent save/load files
+- Add persistent profile sync
 - Add a polished achievements system
 
 ## License
