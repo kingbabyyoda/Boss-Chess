@@ -9,6 +9,8 @@ from boss_chess.cheat_events.core import CheatController
 from boss_chess.engine.engine import ChessEngine
 from boss_chess.memes.provider import MemeProvider
 from boss_chess.persistence import load_game, save_game
+from boss_chess.replay import export_pgn
+from boss_chess.stats import SessionStats
 from boss_chess.state import GameState
 from boss_chess.trainer.analysis import Trainer
 from boss_chess.trainer.report import PracticePrompt
@@ -19,6 +21,7 @@ from boss_chess.types import GameConfig
 class AiMoveOutcome:
     move: chess.Move
     messages: list[str]
+    evaluation: int = 0
 
 
 @dataclass(slots=True)
@@ -29,8 +32,10 @@ class GuiSession:
     trainer: Trainer = field(init=False)
     memes: MemeProvider = field(default_factory=MemeProvider)
     cheat: CheatController = field(default_factory=CheatController)
+    stats: SessionStats = field(default_factory=SessionStats)
     ai_color: chess.Color = field(init=False)
     saves_dir: Path = field(default_factory=lambda: Path("saves"))
+    eval_history: list[int] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.engine = self._build_engine()
@@ -99,6 +104,24 @@ class GuiSession:
             ]
         )
 
+    def opening_explorer_text(self) -> str:
+        return self.trainer.analyse_opening(self.state.board)
+
+    def stats_text(self) -> str:
+        lines = self.stats.summary_lines()
+        achievements = self.stats.unlocked_achievements()
+        if achievements:
+            lines.append("Achievements:")
+            lines.extend(f"- {item.title}: {item.description}" for item in achievements)
+        else:
+            lines.append("Achievements: none unlocked yet")
+        return "\n".join(lines)
+
+    def export_pgn(self, name: str) -> Path:
+        path = self.saves_dir / (name if name.endswith(".pgn") else f"{name}.pgn")
+        export_pgn(self.state, path, headers={"Event": "Boss Chess", "White": "Human", "Black": "Engine"})
+        return path
+
     def board_title(self, square: int) -> str:
         piece = self.state.board.piece_at(square)
         if piece is None:
@@ -116,6 +139,8 @@ class GuiSession:
         self.state.push(move)
         if captured:
             self.cheat.note_capture(captured, self.ai_color)
+        opening_name = self.trainer.opening_recognizer.identify(list(board_before.move_stack))
+        self.stats.record_move(opening_name)
 
         messages: list[str] = []
         if self.config.trainer:
@@ -125,6 +150,8 @@ class GuiSession:
         if self.config.cheat and not self.cheat.boss_intro_shown:
             messages.extend(self.cheat.boss_banner())
             self.cheat.boss_intro_shown = True
+        self.eval_history.append(self.trainer.engine.score_position(self.state.board))
+        self.eval_history = self.eval_history[-48:]
         self._autosave()
         return "\n".join(messages) if messages else "Move played."
 
@@ -138,6 +165,8 @@ class GuiSession:
         self.state.push(move)
         if captured:
             self.cheat.note_capture(captured, self.ai_color)
+        opening_name = self.trainer.opening_recognizer.identify(list(self.state.board.move_stack))
+        self.stats.record_move(opening_name)
         messages.append(f"AI plays {move.uci()}")
 
         if self.config.cheat:
@@ -157,12 +186,24 @@ class GuiSession:
             self.state.push(extra)
             if cap:
                 self.cheat.note_capture(cap, self.ai_color)
+            self.stats.record_move(self.trainer.opening_recognizer.identify(list(self.state.board.move_stack)))
             messages.append(f"AI steals another move: {extra.uci()}")
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
 
+        self.eval_history.append(self.trainer.engine.score_position(self.state.board))
+        self.eval_history = self.eval_history[-48:]
         self._autosave()
-        return AiMoveOutcome(move=move, messages=messages)
+        return AiMoveOutcome(move=move, messages=messages, evaluation=self.eval_history[-1] if self.eval_history else 0)
+
+    def game_over_report(self) -> None:
+        result = self.state.board.result(claim_draw=True)
+        winner = None
+        if result == "1-0":
+            winner = chess.WHITE
+        elif result == "0-1":
+            winner = chess.BLACK
+        self.stats.record_game_end(result, winner=winner, checkmate=self.state.board.is_checkmate())
 
     def undo(self) -> str:
         if self.state.pop() is None:
@@ -173,6 +214,7 @@ class GuiSession:
     def reset(self) -> None:
         self.state.reset()
         self.cheat = CheatController()
+        self.eval_history.clear()
         self._autosave()
 
     def save(self, name: str) -> Path:
@@ -190,6 +232,7 @@ class GuiSession:
         self.engine = self._build_engine()
         self.trainer = Trainer(self.engine)
         self.memes = MemeProvider()
+        self.eval_history.clear()
         return path
 
     def list_saves(self) -> list[str]:
@@ -205,6 +248,9 @@ class GuiSession:
         if not self.state.move_history:
             return "(no moves yet)"
         return " ".join(move.uci() for move in self.state.move_history)
+
+    def eval_graph(self) -> list[int]:
+        return list(self.eval_history)
 
     def _autosave(self) -> None:
         try:
