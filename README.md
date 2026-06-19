@@ -28,6 +28,10 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Boss-style cheat events
 - Boss health, phase changes, boss meter, and boss HUD lines
 - Save-friendly architecture
+- PGN export/import helpers
+- Session statistics and unlockable achievements
+- Opening explorer and release-candidate style settings dialog
+- Evaluation-history graph in the GUI
 - Tkinter GUI with clickable board and move animation
 - Board flip and reset view controls
 - Captured pieces display
@@ -152,10 +156,15 @@ The GUI mode includes:
 - board flipping
 - captured pieces display
 - evaluation meter
+- evaluation history graph
 - save and load controls
 - theme switching
+- release-candidate settings dialog
 - sound feedback
 - live trainer/meme/cheat status
+- opening explorer
+- report, lesson, practice, and stats buttons
+- PGN export
 
 ## Controls
 
@@ -177,6 +186,9 @@ Other commands:
 - `lesson`
 - `practice`
 - `puzzle`
+- `stats`
+- `exportpgn <name>`
+- `importpgn <name>`
 - `save <name>`
 - `load <name>`
 - `saves`
