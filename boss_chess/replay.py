@@ -7,6 +7,7 @@ import chess
 import chess.pgn
 
 from boss_chess.state import GameState
+from boss_chess.types import GameVariant
 
 
 @dataclass(slots=True)
@@ -22,6 +23,9 @@ def export_pgn(state: GameState, path: Path, headers: dict[str, str] | None = No
     if headers:
         for key, value in headers.items():
             game.headers[key] = value
+    game.headers["Variant"] = state.variant
+    if state.variant == GameVariant.CHESS960.value:
+        game.headers["Chess960Seed"] = str(state.chess960_seed)
     game.setup(chess.Board(state.starting_fen))
     node = game
     board = chess.Board(state.starting_fen)
@@ -41,7 +45,9 @@ def load_pgn(path: Path) -> GameState:
         raise ValueError(f"No PGN game found in {path}")
 
     starting_fen = game.headers.get("FEN", chess.STARTING_FEN)
-    state = GameState(starting_fen=starting_fen)
+    variant = str(game.headers.get("Variant", GameVariant.STANDARD.value))
+    chess960_seed = int(game.headers.get("Chess960Seed", 0) or 0)
+    state = GameState(starting_fen=starting_fen, variant=variant, chess960_seed=chess960_seed)
     board = chess.Board(starting_fen)
     for move in game.mainline_moves():
         if move in board.legal_moves:
