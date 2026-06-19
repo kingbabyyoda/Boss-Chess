@@ -22,6 +22,13 @@ BOSS_NAMES = [
     "The Final Queen",
 ]
 
+PHASE_NAMES = {
+    1: "Initiation",
+    2: "Escalation",
+    3: "Collapse",
+    4: "Final Phase",
+}
+
 
 @dataclass(slots=True)
 class CheatController:
@@ -57,6 +64,8 @@ class CheatController:
             self.boss_hp = min(self.boss_max_hp, self.boss_hp + heal)
             self.last_event = f"{self.boss_name} fed on the attack and healed {heal}."
         self._sync_phase()
+        if self.boss_hp <= 0:
+            self.last_event = f"{self.boss_name} has been broken apart."
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -99,8 +108,21 @@ class CheatController:
         bar = "█" * filled + "░" * (bar_width - filled)
         return f"{self.boss_name} HP [{bar}] {self.boss_hp}/{self.boss_max_hp} | Phase {self.boss_phase}/4"
 
+    def phase_name(self) -> str:
+        return PHASE_NAMES.get(self.boss_phase, "Final Phase")
+
     def intro_line(self) -> str:
         return f"{self.boss_name} awakens. Defeat it by taking its pieces apart."
+
+    def boss_banner(self) -> list[str]:
+        return [
+            f"Boss Fight: {self.boss_name}",
+            f"Phase: {self.phase_name()}",
+            self.boss_meter(),
+        ]
+
+    def battle_summary(self) -> str:
+        return f"{self.boss_name} is in {self.phase_name()} with {self.boss_hp}/{self.boss_max_hp} HP left."
 
     def note_victory_pressure(self) -> None:
         self.chaos_level += 1
@@ -143,7 +165,7 @@ class CheatController:
                 (0.74, self._resurrect_piece),
                 (0.84, self._grant_extra_turn),
                 (0.92, self._reality_rewrite),
-                (1.00, self._boss_phase)
+                (1.00, self._boss_phase),
             ]
         if phase == 2:
             return [
@@ -153,7 +175,7 @@ class CheatController:
                 (0.68, self._duplicate_piece),
                 (0.80, self._resurrect_piece),
                 (0.90, self._grant_extra_turn),
-                (1.00, self._boss_phase)
+                (1.00, self._boss_phase),
             ]
         return [
             (0.20, self._delete_enemy_piece),
@@ -162,7 +184,7 @@ class CheatController:
             (0.70, self._resurrect_piece),
             (0.84, self._grant_extra_turn),
             (0.93, self._reality_rewrite),
-            (1.00, self._boss_phase)
+            (1.00, self._boss_phase),
         ]
 
     def _sync_phase(self) -> None:
