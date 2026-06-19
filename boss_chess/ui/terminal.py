@@ -18,7 +18,7 @@ class TerminalGame:
     def __init__(self, config: GameConfig):
         self.config = config
         self.state = GameState()
-        self.engine = ChessEngine(depth=config.engine.depth)
+        self.engine = self._build_engine()
         self.trainer = Trainer(self.engine)
         self.memes = MemeProvider()
         self.cheat = CheatController()
@@ -26,6 +26,16 @@ class TerminalGame:
         self.running = True
         self.saves_dir = Path("saves")
         self.saves_dir.mkdir(parents=True, exist_ok=True)
+
+    def _build_engine(self) -> ChessEngine:
+        return ChessEngine(
+            depth=self.config.engine.depth,
+            use_stockfish=self.config.engine.use_stockfish,
+            stockfish_path=self.config.engine.stockfish_path,
+            use_opening_book=self.config.engine.use_opening_book,
+            target_elo=self.config.engine.target_elo,
+            multi_pv=self.config.engine.multi_pv,
+        )
 
     def run(self) -> None:
         self._banner()
@@ -246,7 +256,7 @@ class TerminalGame:
         self.config = loaded.config
         self.ai_color = loaded.ai_color
         self.cheat = loaded.cheat
-        self.engine = ChessEngine(depth=self.config.engine.depth)
+        self.engine = self._build_engine()
         self.trainer = Trainer(self.engine)
         self.memes = MemeProvider()
         print(f"Loaded {path.as_posix()}")
