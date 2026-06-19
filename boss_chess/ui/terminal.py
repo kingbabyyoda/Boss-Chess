@@ -50,6 +50,8 @@ class TerminalGame:
         print("=== Boss Chess ===")
         print("Type 'help' for commands.")
         print(self._mode_line())
+        if self.config.meme:
+            print(self.memes.status_line())
         if self.config.cheat:
             self._print_boss_banner()
             self.cheat.boss_intro_shown = True
@@ -71,6 +73,8 @@ class TerminalGame:
         print(f"Turn: {'White' if self.state.board.turn == chess.WHITE else 'Black'}")
         print(self._mode_line())
         print(self._history_line())
+        if self.config.meme:
+            print(self.memes.status_line())
         if self.config.cheat:
             self._print_boss_banner()
             print(f"Cheat event: {self.cheat.last_event}")
@@ -95,6 +99,8 @@ class TerminalGame:
                 self._help(); continue
             if lower == "new":
                 self.state.reset(); self.cheat = CheatController(); print("New game started.")
+                if self.config.meme:
+                    print(self.memes.status_line())
                 if self.config.cheat:
                     self._print_boss_banner(); self.cheat.boss_intro_shown = True
                 return
@@ -131,7 +137,7 @@ class TerminalGame:
             if self.config.trainer:
                 print(self.trainer.review_move(board_before, move))
             if self.config.meme:
-                print(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
+                print(self.memes.get_context_line())
             if self.config.cheat and not self.cheat.boss_intro_shown:
                 self._print_boss_banner(); self.cheat.boss_intro_shown = True
             self._autosave(); return
@@ -158,7 +164,7 @@ class TerminalGame:
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
         if self.config.meme:
-            messages.append(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
+            messages.append(self.memes.get_context_line())
         while self.config.cheat and self.cheat.extra_turns > 0 and not self.state.board.is_game_over():
             self.cheat.extra_turns -= 1
             extra = self.engine.pick_move(self.state.board)
