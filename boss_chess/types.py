@@ -14,6 +14,29 @@ class Mode(str, Enum):
     CHEAT = "cheat"
 
 
+class GameVariant(str, Enum):
+    STANDARD = "standard"
+    CHESS960 = "chess960"
+    KING_OF_THE_HILL = "king_of_the_hill"
+    THREE_CHECK = "three_check"
+    ATOMIC = "atomic"
+    RACING_KINGS = "racing_kings"
+
+
+@dataclass(slots=True)
+class VariantConfig:
+    name: GameVariant = GameVariant.STANDARD
+    chess960_seed: int = 0
+
+
+@dataclass(slots=True)
+class MultiplayerConfig:
+    mode: str = "offline"  # offline, host, join
+    host: str = "127.0.0.1"
+    port: int = 8765
+    username: str = "Player"
+
+
 @dataclass(slots=True)
 class EngineConfig:
     depth: int = 3
@@ -31,6 +54,8 @@ class GameConfig:
     meme: bool = False
     cheat: bool = False
     engine: EngineConfig = field(default_factory=EngineConfig)
+    variant: VariantConfig = field(default_factory=VariantConfig)
+    multiplayer: MultiplayerConfig = field(default_factory=MultiplayerConfig)
 
 
 @dataclass(slots=True)
