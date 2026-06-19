@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import tkinter as tk
 from tkinter import ttk
 
-from boss_chess.types import GameConfig
+from boss_chess.types import GameConfig, GameVariant
 
 
 @dataclass(slots=True)
@@ -19,6 +19,8 @@ class SettingsResult:
     trainer: bool
     meme: bool
     cheat: bool
+    variant: str
+    chess960_seed: int
     theme: str
 
 
@@ -43,6 +45,8 @@ class SettingsDialog:
         self.meme_var = tk.BooleanVar(value=config.meme)
         self.cheat_var = tk.BooleanVar(value=config.cheat)
         self.theme_var = tk.StringVar(value=theme_name)
+        self.variant_var = tk.StringVar(value=config.variant.name.value)
+        self.chess960_seed_var = tk.IntVar(value=config.variant.chess960_seed)
 
         frame = ttk.Frame(self.window, padding=12)
         frame.pack(fill="both", expand=True)
@@ -56,6 +60,11 @@ class SettingsDialog:
         self._check(frame, "Trainer", self.trainer_var, row); row += 1
         self._check(frame, "Meme", self.meme_var, row); row += 1
         self._check(frame, "Cheat", self.cheat_var, row); row += 1
+
+        ttk.Label(frame, text="Variant").grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Combobox(frame, textvariable=self.variant_var, values=[variant.value for variant in GameVariant], state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=4)
+        row += 1
+        self._label_entry(frame, "Chess960 seed", self.chess960_seed_var, row); row += 1
 
         ttk.Label(frame, text="Theme").grid(row=row, column=0, sticky="w", pady=4)
         ttk.Combobox(frame, textvariable=self.theme_var, values=["Classic", "Midnight", "Neon"], state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=4)
@@ -86,6 +95,8 @@ class SettingsDialog:
             trainer=bool(self.trainer_var.get()),
             meme=bool(self.meme_var.get()),
             cheat=bool(self.cheat_var.get()),
+            variant=str(self.variant_var.get()),
+            chess960_seed=int(self.chess960_seed_var.get()),
             theme=str(self.theme_var.get()),
         )
         self.window.destroy()
@@ -101,6 +112,8 @@ class SettingsDialog:
             trainer=self.config.trainer,
             meme=self.config.meme,
             cheat=self.config.cheat,
+            variant=self.config.variant.name.value,
+            chess960_seed=self.config.variant.chess960_seed,
             theme=self.theme_name,
         )
         self.window.destroy()
