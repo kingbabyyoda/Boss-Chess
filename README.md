@@ -16,6 +16,8 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Package-based code in `boss_chess/`
 - Legal move validation with `python-chess`
 - Alpha-beta search with quiescence and transposition-table caching
+- Optional Stockfish integration
+- Built-in opening book for early-game play
 - Heuristic evaluation with piece-square tables, king safety, mobility, and passed pawns
 - Trainer feedback loop
 - Meme provider with Reddit fallback cache
@@ -56,6 +58,18 @@ python main.py --gui
 
 If you leave off the flag, Boss Chess asks which interface you want.
 
+## Strong AI settings
+
+At launch, you can choose:
+- search depth
+- opening book on/off
+- Stockfish on/off
+- Stockfish path
+- target Elo
+- analysis line count
+
+If Stockfish is not available, Boss Chess falls back to the built-in engine automatically.
+
 ## Project layout
 
 ```text
@@ -90,7 +104,7 @@ Boss-Chess-main/
 ## Modes
 
 ### Normal
-Plays a legal chess game using the built-in engine. Optional Stockfish support can be added later without changing the architecture.
+Plays a legal chess game using the built-in engine or Stockfish when enabled.
 
 ### Trainer
 After your move, the trainer prints a short analysis:
@@ -151,8 +165,7 @@ Other commands:
 
 ## Roadmap
 
-- Add Stockfish support
-- Add opening book support
+- Add endgame tablebases
 - Add puzzle mode
 - Add PGN import/export
 - Add richer cheat events
