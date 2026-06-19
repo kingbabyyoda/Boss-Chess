@@ -29,7 +29,7 @@ def main() -> int:
     args = parser.parse_args()
 
     print("Boss Chess")
-    print("A modular chess project with normal, trainer, meme, cheat, and GUI modes.")
+    print("A modular chess project with variants, multiplayer, trainer, meme, cheat, and GUI modes.")
     config = configure_game()
 
     interface = "terminal"
@@ -39,6 +39,10 @@ def main() -> int:
         interface = "terminal"
     elif not args.gui and not args.terminal:
         interface = _choose_interface()
+
+    if config.multiplayer.mode in {"host", "join"} and interface == "gui":
+        print("Multiplayer is currently terminal-first, so the GUI launcher will switch to terminal mode.")
+        interface = "terminal"
 
     if interface == "gui":
         try:
