@@ -84,6 +84,9 @@ def _config_to_dict(config: GameConfig) -> dict[str, Any]:
             "depth": config.engine.depth,
             "use_stockfish": config.engine.use_stockfish,
             "stockfish_path": config.engine.stockfish_path,
+            "use_opening_book": config.engine.use_opening_book,
+            "target_elo": config.engine.target_elo,
+            "multi_pv": config.engine.multi_pv,
         },
     }
 
@@ -94,6 +97,9 @@ def _config_from_dict(data: dict[str, Any]) -> GameConfig:
         depth=int(engine_data.get("depth", 3)),
         use_stockfish=bool(engine_data.get("use_stockfish", False)),
         stockfish_path=engine_data.get("stockfish_path"),
+        use_opening_book=bool(engine_data.get("use_opening_book", True)),
+        target_elo=int(engine_data.get("target_elo", 1800)),
+        multi_pv=int(engine_data.get("multi_pv", 3)),
     )
     return GameConfig(
         ai_plays_white=bool(data.get("ai_plays_white", False)),
