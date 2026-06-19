@@ -1,6 +1,7 @@
+import chess
+
 from boss_chess.engine.evaluation import evaluate_board
 from boss_chess.engine.search import choose_move
-import chess
 
 
 def test_evaluate_starting_board_is_numeric():

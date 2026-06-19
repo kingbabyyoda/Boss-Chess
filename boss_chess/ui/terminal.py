@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from pathlib import Path
 
 import chess
 
 from boss_chess.cheat_events.core import CheatController
 from boss_chess.engine.engine import ChessEngine
 from boss_chess.memes.provider import MemeProvider
+from boss_chess.persistence import load_game, save_game
 from boss_chess.state import GameState
 from boss_chess.trainer.analysis import Trainer
 from boss_chess.types import GameConfig
@@ -22,6 +23,8 @@ class TerminalGame:
         self.cheat = CheatController()
         self.ai_color = chess.BLACK if not config.ai_plays_white else chess.WHITE
         self.running = True
+        self.saves_dir = Path("saves")
+        self.saves_dir.mkdir(parents=True, exist_ok=True)
 
     def run(self) -> None:
         self._banner()
@@ -56,8 +59,19 @@ class TerminalGame:
         print(self.state.board.unicode(borders=True))
         print(f"Turn: {'White' if self.state.board.turn == chess.WHITE else 'Black'}")
         print(self._mode_line())
+        print(self._history_line())
         if self.config.cheat:
             print(f"Cheat event: {self.cheat.last_event}")
+            if self.cheat.event_log:
+                print("Recent chaos: " + " | ".join(self.cheat.event_log[-3:]))
+        if self.state.move_history:
+            print(f"Last move: {self.state.move_history[-1].uci()}")
+
+    def _history_line(self) -> str:
+        if not self.state.move_history:
+            return "Moves: none yet"
+        tail = " ".join(move.uci() for move in self.state.move_history[-8:])
+        return f"Moves: {tail}"
 
     def _human_turn(self) -> None:
         while True:
@@ -73,7 +87,7 @@ class TerminalGame:
                 self._help()
                 continue
             if lower == "new":
-                self.state = GameState()
+                self.state.reset()
                 self.cheat = CheatController()
                 print("New game started.")
                 return
@@ -85,6 +99,27 @@ class TerminalGame:
                 continue
             if lower == "modes":
                 print(self._mode_line())
+                continue
+            if lower == "pgn":
+                print(self._pgn_text())
+                continue
+            if lower == "eval":
+                print(self._evaluation_text())
+                continue
+            if lower.startswith("save "):
+                self._save(lower[5:].strip())
+                continue
+            if lower == "save":
+                self._save("autosave")
+                continue
+            if lower.startswith("load "):
+                self._load(lower[5:].strip())
+                return
+            if lower == "load":
+                print("Usage: load <name>")
+                continue
+            if lower == "saves":
+                self._list_saves()
                 continue
 
             move = self._parse_move(text)
@@ -106,6 +141,7 @@ class TerminalGame:
             if self.config.meme:
                 print(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
 
+            self._autosave()
             return
 
     def _ai_turn(self) -> None:
@@ -134,6 +170,8 @@ class TerminalGame:
             self.cheat.apply(self.state.board, self.ai_color)
             print(f"Cheat event: {self.cheat.last_event}")
 
+        self._autosave()
+
     def _game_over(self) -> None:
         print()
         print("Game over.")
@@ -153,10 +191,11 @@ class TerminalGame:
             print("Nothing to undo.")
             return
         print("Undid the last move.")
+        self._autosave()
 
     def _help(self) -> None:
         print(
-            "Commands: e2e4, undo, fen, new, modes, help, quit"
+            "Commands: e2e4, undo, fen, pgn, eval, save <name>, load <name>, saves, new, modes, help, quit"
         )
 
     def _parse_move(self, text: str) -> chess.Move | None:
@@ -164,3 +203,60 @@ class TerminalGame:
             return chess.Move.from_uci(text.strip().lower())
         except Exception:
             return None
+
+    def _autosave(self) -> None:
+        try:
+            save_game(self.saves_dir / "autosave.json", self.state, self.config, self.ai_color, self.cheat)
+        except Exception:
+            pass
+
+    def _save(self, name: str) -> None:
+        if not name:
+            print("Usage: save <name>")
+            return
+        path = self._save_path(name)
+        save_game(path, self.state, self.config, self.ai_color, self.cheat)
+        print(f"Saved to {path.as_posix()}")
+
+    def _load(self, name: str) -> None:
+        if not name:
+            print("Usage: load <name>")
+            return
+        path = self._save_path(name)
+        if not path.exists():
+            print(f"No save found at {path.as_posix()}")
+            return
+        loaded = load_game(path)
+        self.state = loaded.state
+        self.config = loaded.config
+        self.ai_color = loaded.ai_color
+        self.cheat = loaded.cheat
+        self.engine = ChessEngine(depth=self.config.engine.depth)
+        self.trainer = Trainer(self.engine)
+        self.memes = MemeProvider()
+        print(f"Loaded {path.as_posix()}")
+
+    def _list_saves(self) -> None:
+        saves = sorted(self.saves_dir.glob("*.json"))
+        if not saves:
+            print("No save files yet.")
+            return
+        for path in saves:
+            print(path.name)
+
+    def _save_path(self, name: str) -> Path:
+        clean = name.strip().replace("/", "_").replace("\\", "_")
+        if not clean.endswith(".json"):
+            clean += ".json"
+        return self.saves_dir / clean
+
+    def _pgn_text(self) -> str:
+        if not self.state.move_history:
+            return "(no moves yet)"
+        return " ".join(move.uci() for move in self.state.move_history)
+
+    def _evaluation_text(self) -> str:
+        analysis = self.engine.analyse(self.state.board, max_lines=3)
+        best = analysis.best_move.uci() if analysis.best_move else "n/a"
+        top = ", ".join(f"{move.uci()} ({score / 100:+.2f})" for move, score in analysis.top_lines) if analysis.top_lines else "n/a"
+        return f"{analysis.summary}\nBest: {best}\nTop: {top}"

@@ -7,8 +7,12 @@ import chess
 
 @dataclass
 class GameState:
-    board: chess.Board = field(default_factory=chess.Board)
+    starting_fen: str = chess.STARTING_FEN
+    board: chess.Board = field(init=False)
     move_history: list[chess.Move] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.board = chess.Board(self.starting_fen)
 
     def push(self, move: chess.Move) -> None:
         self.board.push(move)
@@ -20,3 +24,8 @@ class GameState:
         move = self.board.pop()
         self.move_history.pop()
         return move
+
+    def reset(self, starting_fen: str | None = None) -> None:
+        self.starting_fen = starting_fen or chess.STARTING_FEN
+        self.board = chess.Board(self.starting_fen)
+        self.move_history.clear()

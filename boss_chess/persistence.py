@@ -17,7 +17,8 @@ from boss_chess.types import EngineConfig, GameConfig
 class SavedGame:
     version: int
     created_at: str
-    fen: str
+    start_fen: str
+    current_fen: str
     moves: list[str]
     config: dict[str, Any]
     ai_color: str
@@ -37,7 +38,8 @@ def save_game(path: Path, state: GameState, config: GameConfig, ai_color: chess.
     payload = SavedGame(
         version=1,
         created_at=datetime.now(timezone.utc).isoformat(),
-        fen=state.board.fen(),
+        start_fen=state.starting_fen,
+        current_fen=state.board.fen(),
         moves=[move.uci() for move in state.move_history],
         config=_config_to_dict(config),
         ai_color="white" if ai_color == chess.WHITE else "black",
@@ -50,17 +52,22 @@ def load_game(path: Path) -> LoadedGame:
     data = json.loads(path.read_text(encoding="utf-8"))
 
     config = _config_from_dict(data.get("config", {}))
-    state = GameState()
-    state.board = chess.Board(data.get("fen", chess.STARTING_FEN))
+    start_fen = str(data.get("start_fen", chess.STARTING_FEN))
+    state = GameState(starting_fen=start_fen)
     state.move_history = []
+
     for move_text in data.get("moves", []):
         try:
-            move = chess.Move.from_uci(move_text)
+            move = chess.Move.from_uci(str(move_text))
         except ValueError:
             continue
         if move in state.board.legal_moves:
-            state.board.push(move)
-            state.move_history.append(move)
+            state.push(move)
+
+    current_fen = str(data.get("current_fen", state.board.fen()))
+    if state.board.fen() != current_fen:
+        # Keep the validated move stack if possible, but align the visible board with the save file.
+        state.board = chess.Board(current_fen)
 
     ai_color = chess.WHITE if data.get("ai_color", "black") == "white" else chess.BLACK
     cheat = CheatController.from_dict(data.get("cheat", {}))

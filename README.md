@@ -111,6 +111,11 @@ Other commands:
 - `help`
 - `undo`
 - `fen`
+- `eval`
+- `pgn`
+- `save <name>`
+- `load <name>`
+- `saves`
 - `new`
 - `modes`
 - `quit`
@@ -123,7 +128,7 @@ Other commands:
 - Add puzzle mode
 - Add PGN import/export
 - Add richer cheat events
-- Add persistent save files
+- Add persistent save/load files
 - Add a polished achievements system
 
 ## License
