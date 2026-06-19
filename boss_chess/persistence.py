@@ -10,7 +10,7 @@ import chess
 
 from boss_chess.cheat_events.core import CheatController
 from boss_chess.state import GameState
-from boss_chess.types import EngineConfig, GameConfig
+from boss_chess.types import EngineConfig, GameConfig, GameVariant, MultiplayerConfig, VariantConfig
 
 
 @dataclass(slots=True)
@@ -36,7 +36,7 @@ class LoadedGame:
 def save_game(path: Path, state: GameState, config: GameConfig, ai_color: chess.Color, cheat: CheatController) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = SavedGame(
-        version=1,
+        version=2,
         created_at=datetime.now(timezone.utc).isoformat(),
         start_fen=state.starting_fen,
         current_fen=state.board.fen(),
@@ -53,7 +53,11 @@ def load_game(path: Path) -> LoadedGame:
 
     config = _config_from_dict(data.get("config", {}))
     start_fen = str(data.get("start_fen", chess.STARTING_FEN))
-    state = GameState(starting_fen=start_fen)
+    state = GameState(
+        starting_fen=start_fen,
+        variant=config.variant.name.value,
+        chess960_seed=config.variant.chess960_seed,
+    )
     state.move_history = []
 
     for move_text in data.get("moves", []):
@@ -66,7 +70,6 @@ def load_game(path: Path) -> LoadedGame:
 
     current_fen = str(data.get("current_fen", state.board.fen()))
     if state.board.fen() != current_fen:
-        # Keep the validated move stack if possible, but align the visible board with the save file.
         state.board = chess.Board(current_fen)
 
     ai_color = chess.WHITE if data.get("ai_color", "black") == "white" else chess.BLACK
@@ -88,11 +91,23 @@ def _config_to_dict(config: GameConfig) -> dict[str, Any]:
             "target_elo": config.engine.target_elo,
             "multi_pv": config.engine.multi_pv,
         },
+        "variant": {
+            "name": config.variant.name.value if isinstance(config.variant.name, GameVariant) else str(config.variant.name),
+            "chess960_seed": config.variant.chess960_seed,
+        },
+        "multiplayer": {
+            "mode": config.multiplayer.mode,
+            "host": config.multiplayer.host,
+            "port": config.multiplayer.port,
+            "username": config.multiplayer.username,
+        },
     }
 
 
 def _config_from_dict(data: dict[str, Any]) -> GameConfig:
     engine_data = data.get("engine", {}) if isinstance(data, dict) else {}
+    variant_data = data.get("variant", {}) if isinstance(data, dict) else {}
+    mp_data = data.get("multiplayer", {}) if isinstance(data, dict) else {}
     engine = EngineConfig(
         depth=int(engine_data.get("depth", 3)),
         use_stockfish=bool(engine_data.get("use_stockfish", False)),
@@ -101,10 +116,22 @@ def _config_from_dict(data: dict[str, Any]) -> GameConfig:
         target_elo=int(engine_data.get("target_elo", 1800)),
         multi_pv=int(engine_data.get("multi_pv", 3)),
     )
+    variant = VariantConfig(
+        name=GameVariant(str(variant_data.get("name", GameVariant.STANDARD.value))),
+        chess960_seed=int(variant_data.get("chess960_seed", 0)),
+    )
+    multiplayer = MultiplayerConfig(
+        mode=str(mp_data.get("mode", "offline")),
+        host=str(mp_data.get("host", "127.0.0.1")),
+        port=int(mp_data.get("port", 8765)),
+        username=str(mp_data.get("username", "Player")),
+    )
     return GameConfig(
         ai_plays_white=bool(data.get("ai_plays_white", False)),
         trainer=bool(data.get("trainer", False)),
         meme=bool(data.get("meme", False)),
         cheat=bool(data.get("cheat", False)),
         engine=engine,
+        variant=variant,
+        multiplayer=multiplayer,
     )
