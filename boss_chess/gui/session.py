@@ -15,6 +15,7 @@ from boss_chess.state import GameState
 from boss_chess.trainer.analysis import Trainer
 from boss_chess.trainer.report import PracticePrompt
 from boss_chess.types import GameConfig
+from boss_chess.variants import variant_label
 
 
 @dataclass(slots=True)
@@ -38,6 +39,7 @@ class GuiSession:
     eval_history: list[int] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        self.state.reset(variant=self.config.variant.name.value, chess960_seed=self.config.variant.chess960_seed)
         self.engine = self._build_engine()
         self.trainer = Trainer(self.engine)
         self.ai_color = chess.BLACK if not self.config.ai_plays_white else chess.WHITE
@@ -67,7 +69,7 @@ class GuiSession:
         return "Active: " + ", ".join(active)
 
     def status_text(self) -> str:
-        lines = [self.mode_text(), f"Turn: {self.current_turn_label()}"]
+        lines = [self.mode_text(), f"Variant: {variant_label(self.state.variant)}", f"Turn: {self.current_turn_label()}"]
         if self.state.move_history:
             lines.append(f"Last move: {self.state.move_history[-1].uci()}")
         if self.state.board.is_check():
@@ -212,7 +214,7 @@ class GuiSession:
         return "Undid the last move."
 
     def reset(self) -> None:
-        self.state.reset()
+        self.state.reset(variant=self.config.variant.name.value, chess960_seed=self.config.variant.chess960_seed)
         self.cheat = CheatController()
         self.eval_history.clear()
         self._autosave()
