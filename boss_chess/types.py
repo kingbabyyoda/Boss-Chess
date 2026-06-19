@@ -19,6 +19,9 @@ class EngineConfig:
     depth: int = 3
     use_stockfish: bool = False
     stockfish_path: Optional[str] = None
+    use_opening_book: bool = True
+    target_elo: int = 1800
+    multi_pv: int = 3
 
 
 @dataclass(slots=True)
