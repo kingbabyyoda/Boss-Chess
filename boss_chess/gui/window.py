@@ -7,9 +7,11 @@ import chess
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
+from boss_chess.gui.piece_art import build_piece_images
 from boss_chess.gui.session import AiMoveOutcome, GuiSession
 from boss_chess.gui.settings_dialog import SettingsDialog
 from boss_chess.types import GameVariant
+from boss_chess.variants import variant_label
 
 UNICODE_PIECES = {
     "P": "♙",
@@ -27,9 +29,57 @@ UNICODE_PIECES = {
 }
 
 THEMES = {
-    "Classic": {"light": "#f0d9b5", "dark": "#b58863", "selected": "#f7ea48", "hint": "#8fd3ff"},
-    "Midnight": {"light": "#d8dee9", "dark": "#4c566a", "selected": "#88c0d0", "hint": "#a3be8c"},
-    "Neon": {"light": "#202020", "dark": "#101010", "selected": "#7c3aed", "hint": "#22d3ee"},
+    "Classic": {
+        "window": "#f8fafc",
+        "surface": "#ffffff",
+        "surface_alt": "#f1f5f9",
+        "text": "#0f172a",
+        "muted": "#64748b",
+        "accent": "#2563eb",
+        "accent_alt": "#0ea5e9",
+        "board_light": "#f0d9b5",
+        "board_dark": "#b58863",
+        "selected": "#facc15",
+        "hint": "#93c5fd",
+        "last": "#fb923c",
+        "check": "#f87171",
+        "panel_border": "#cbd5e1",
+        "line": "#dbe4f0",
+    },
+    "Midnight": {
+        "window": "#0f172a",
+        "surface": "#111827",
+        "surface_alt": "#172036",
+        "text": "#e5e7eb",
+        "muted": "#94a3b8",
+        "accent": "#38bdf8",
+        "accent_alt": "#a78bfa",
+        "board_light": "#d8dee9",
+        "board_dark": "#4c566a",
+        "selected": "#7dd3fc",
+        "hint": "#a3be8c",
+        "last": "#f59e0b",
+        "check": "#fb7185",
+        "panel_border": "#334155",
+        "line": "#334155",
+    },
+    "Neon": {
+        "window": "#06060a",
+        "surface": "#0f1118",
+        "surface_alt": "#151827",
+        "text": "#f8fafc",
+        "muted": "#94a3b8",
+        "accent": "#22d3ee",
+        "accent_alt": "#7c3aed",
+        "board_light": "#1b1b25",
+        "board_dark": "#0f1020",
+        "selected": "#7c3aed",
+        "hint": "#22d3ee",
+        "last": "#f472b6",
+        "check": "#fb7185",
+        "panel_border": "#2e2e44",
+        "line": "#2e2e44",
+    },
 }
 
 
@@ -47,8 +97,8 @@ class BossChessApp:
         self.session = session
         self.root = tk.Tk()
         self.root.title("Boss Chess")
-        self.root.geometry("1320x860")
-        self.root.minsize(1120, 760)
+        self.root.geometry("1380x900")
+        self.root.minsize(1180, 800)
 
         self.theme = ThemeState()
         self.flip_board = False
@@ -57,9 +107,11 @@ class BossChessApp:
         self.message_lines: list[str] = []
         self.animating = False
         self._animation_label: tk.Label | None = None
+        self._piece_images = build_piece_images(self.root, size=74)
 
         self._setup_styles()
         self._build_ui()
+        self._apply_theme()
         self.refresh_all()
         self.root.after(150, self._kick_ai_if_needed)
 
@@ -72,29 +124,52 @@ class BossChessApp:
             style.theme_use("clam")
         except tk.TclError:
             pass
-        style.configure("Boss.TButton", padding=8)
-        style.configure("Boss.TLabelframe", padding=10)
+        style.configure("Boss.TButton", padding=(12, 8), font=("Segoe UI", 10, "bold"))
+        style.configure("Boss.Primary.TButton", padding=(12, 8), font=("Segoe UI", 10, "bold"))
+        style.configure("Boss.TLabelframe", padding=12)
         style.configure("Boss.TLabelframe.Label", font=("Segoe UI", 10, "bold"))
         style.configure("Boss.TLabel", font=("Segoe UI", 10))
+        style.configure("Boss.Header.TLabel", font=("Segoe UI", 20, "bold"))
+        style.configure("Boss.Subtitle.TLabel", font=("Segoe UI", 10))
+        style.configure("Boss.Tag.TLabel", font=("Segoe UI", 9, "bold"))
 
     def _build_ui(self) -> None:
-        container = ttk.Frame(self.root, padding=12)
-        container.pack(fill="both", expand=True)
+        self.root.rowconfigure(0, weight=1)
+        self.root.columnconfigure(0, weight=1)
 
-        left = ttk.Frame(container)
-        left.pack(side="left", fill="both", expand=False)
+        self.main = tk.Frame(self.root, bd=0, highlightthickness=0)
+        self.main.grid(row=0, column=0, sticky="nsew")
+        self.main.columnconfigure(0, weight=0)
+        self.main.columnconfigure(1, weight=1)
+        self.main.rowconfigure(1, weight=1)
 
-        board_toolbar = ttk.Frame(left)
-        board_toolbar.pack(fill="x", pady=(0, 8))
-        ttk.Button(board_toolbar, text="Flip Board", style="Boss.TButton", command=self._flip_board).pack(side="left")
+        self.header = tk.Frame(self.main, bd=0, highlightthickness=0)
+        self.header.grid(row=0, column=0, columnspan=2, sticky="ew", padx=16, pady=(16, 10))
+        self.header.columnconfigure(0, weight=1)
+
+        self.title_var = tk.StringVar(value="Boss Chess")
+        self.subtitle_var = tk.StringVar(value="A polished local chess lab with trainer, meme, cheat, and variant modes.")
+        self.mode_badge_var = tk.StringVar(value="")
+        ttk.Label(self.header, textvariable=self.title_var, style="Boss.Header.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(self.header, textvariable=self.subtitle_var, style="Boss.Subtitle.TLabel").grid(row=1, column=0, sticky="w", pady=(2, 0))
+        ttk.Label(self.header, textvariable=self.mode_badge_var, style="Boss.Tag.TLabel", anchor="e").grid(row=0, column=1, rowspan=2, sticky="e")
+
+        left = tk.Frame(self.main, bd=0, highlightthickness=0)
+        left.grid(row=1, column=0, sticky="ns", padx=(16, 12), pady=(0, 16))
+        right = tk.Frame(self.main, bd=0, highlightthickness=0)
+        right.grid(row=1, column=1, sticky="nsew", padx=(0, 16), pady=(0, 16))
+        right.columnconfigure(0, weight=1)
+
+        board_toolbar = tk.Frame(left, bd=0, highlightthickness=0)
+        board_toolbar.pack(fill="x", pady=(0, 10))
+        ttk.Button(board_toolbar, text="Flip", style="Boss.TButton", command=self._flip_board).pack(side="left")
         ttk.Button(board_toolbar, text="Reset View", style="Boss.TButton", command=self._reset_view).pack(side="left", padx=(8, 0))
-        ttk.Button(board_toolbar, text="Settings", style="Boss.TButton", command=self._open_settings).pack(side="left", padx=(8, 0))
+        ttk.Button(board_toolbar, text="Settings", style="Boss.Primary.TButton", command=self._open_settings).pack(side="left", padx=(8, 0))
 
-        self.board_frame = ttk.Frame(left)
-        self.board_frame.pack(fill="both", expand=False)
-
-        side = ttk.Frame(container)
-        side.pack(side="right", fill="both", expand=True, padx=(14, 0))
+        board_card = ttk.Labelframe(left, text="Board", style="Boss.TLabelframe")
+        board_card.pack(fill="both", expand=False)
+        self.board_frame = tk.Frame(board_card, bd=0, highlightthickness=0)
+        self.board_frame.pack(padx=8, pady=8)
 
         self.status_var = tk.StringVar(value="")
         self.eval_var = tk.StringVar(value="Press Eval to inspect the position.")
@@ -102,46 +177,57 @@ class BossChessApp:
         self.white_captured_var = tk.StringVar(value="White captured: none")
         self.black_captured_var = tk.StringVar(value="Black captured: none")
 
-        ttk.Label(side, textvariable=self.status_var, style="Boss.TLabel", justify="left").pack(anchor="w")
+        status_card = ttk.Labelframe(right, text="Status", style="Boss.TLabelframe")
+        status_card.grid(row=0, column=0, sticky="ew")
+        ttk.Label(status_card, textvariable=self.status_var, style="Boss.TLabel", justify="left").pack(anchor="w")
 
-        eval_wrap = ttk.Labelframe(side, text="Evaluation", style="Boss.TLabelframe")
-        eval_wrap.pack(fill="x", pady=(10, 0))
-        self.eval_canvas = tk.Canvas(eval_wrap, width=56, height=220, highlightthickness=1, highlightbackground="#555")
+        row = ttk.Frame(right)
+        row.grid(row=1, column=0, sticky="ew", pady=(12, 0))
+        row.columnconfigure(0, weight=0)
+        row.columnconfigure(1, weight=1)
+
+        eval_wrap = ttk.Labelframe(row, text="Evaluation", style="Boss.TLabelframe")
+        eval_wrap.grid(row=0, column=0, sticky="n")
+        self.eval_canvas = tk.Canvas(eval_wrap, width=64, height=240, highlightthickness=1, highlightbackground="#555")
         self.eval_canvas.pack(side="left", padx=(0, 10))
         ttk.Label(eval_wrap, textvariable=self.eval_var, style="Boss.TLabel", justify="left").pack(side="left", fill="x", expand=True)
 
-        self.history_canvas = tk.Canvas(side, width=320, height=100, highlightthickness=1, highlightbackground="#444")
-        self.history_canvas.pack(fill="x", pady=(10, 0))
+        right_stack = tk.Frame(row, bd=0, highlightthickness=0)
+        right_stack.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
+        right_stack.columnconfigure(0, weight=1)
 
-        captured_box = ttk.Labelframe(side, text="Captured Pieces", style="Boss.TLabelframe")
-        captured_box.pack(fill="x", pady=(10, 0))
+        self.history_canvas = tk.Canvas(right_stack, width=500, height=120, highlightthickness=1, highlightbackground="#444")
+        self.history_canvas.pack(fill="x")
+
+        captured_box = ttk.Labelframe(right_stack, text="Captured Pieces", style="Boss.TLabelframe")
+        captured_box.pack(fill="x", pady=(12, 0))
         ttk.Label(captured_box, textvariable=self.white_captured_var, style="Boss.TLabel", justify="left").pack(anchor="w")
         ttk.Label(captured_box, textvariable=self.black_captured_var, style="Boss.TLabel", justify="left").pack(anchor="w", pady=(4, 0))
 
-        stats_box = ttk.Labelframe(side, text="Stats & Achievements", style="Boss.TLabelframe")
-        stats_box.pack(fill="x", pady=(10, 0))
+        stats_box = ttk.Labelframe(right_stack, text="Stats & Achievements", style="Boss.TLabelframe")
+        stats_box.pack(fill="x", pady=(12, 0))
         ttk.Label(stats_box, textvariable=self.stats_var, style="Boss.TLabel", justify="left").pack(anchor="w")
 
-        self.move_text = tk.Text(side, height=10, wrap="word", font=("Consolas", 10))
-        self.move_text.pack(fill="x", pady=(10, 8))
+        self.move_text = tk.Text(right_stack, height=9, wrap="word", font=("Consolas", 10), bd=0, highlightthickness=1)
+        self.move_text.pack(fill="x", pady=(12, 8))
         self.move_text.configure(state="disabled")
 
-        self.message_text = tk.Text(side, height=10, wrap="word", font=("Consolas", 10))
+        self.message_text = tk.Text(right_stack, height=11, wrap="word", font=("Consolas", 10), bd=0, highlightthickness=1)
         self.message_text.pack(fill="both", expand=True)
         self.message_text.configure(state="disabled")
 
-        controls = ttk.Labelframe(side, text="Controls", style="Boss.TLabelframe")
+        controls = ttk.Labelframe(right_stack, text="Controls", style="Boss.TLabelframe")
         controls.pack(fill="x", pady=(12, 0))
 
-        buttons1 = ttk.Frame(controls)
+        buttons1 = tk.Frame(controls, bd=0, highlightthickness=0)
         buttons1.pack(fill="x")
-        ttk.Button(buttons1, text="New Game", style="Boss.TButton", command=self._new_game).pack(side="left", padx=(0, 6))
+        ttk.Button(buttons1, text="New Game", style="Boss.Primary.TButton", command=self._new_game).pack(side="left", padx=(0, 6))
         ttk.Button(buttons1, text="Undo", style="Boss.TButton", command=self._undo).pack(side="left", padx=(0, 6))
         ttk.Button(buttons1, text="AI Move", style="Boss.TButton", command=self._force_ai_turn).pack(side="left", padx=(0, 6))
         ttk.Button(buttons1, text="Eval", style="Boss.TButton", command=self._show_eval).pack(side="left", padx=(0, 6))
         ttk.Button(buttons1, text="PGN", style="Boss.TButton", command=self._show_pgn).pack(side="left")
 
-        buttons2 = ttk.Frame(controls)
+        buttons2 = tk.Frame(controls, bd=0, highlightthickness=0)
         buttons2.pack(fill="x", pady=(8, 0))
         ttk.Button(buttons2, text="Report", style="Boss.TButton", command=self._show_report).pack(side="left", padx=(0, 6))
         ttk.Button(buttons2, text="Lesson", style="Boss.TButton", command=self._show_lesson).pack(side="left", padx=(0, 6))
@@ -149,20 +235,20 @@ class BossChessApp:
         ttk.Button(buttons2, text="Stats", style="Boss.TButton", command=self._show_stats).pack(side="left", padx=(0, 6))
         ttk.Button(buttons2, text="Explorer", style="Boss.TButton", command=self._show_explorer).pack(side="left")
 
-        buttons3 = ttk.Frame(controls)
+        buttons3 = tk.Frame(controls, bd=0, highlightthickness=0)
         buttons3.pack(fill="x", pady=(8, 0))
         ttk.Button(buttons3, text="Export PGN", style="Boss.TButton", command=self._export_pgn).pack(side="left", padx=(0, 6))
         ttk.Button(buttons3, text="Save", style="Boss.TButton", command=self._save_game).pack(side="left", padx=(0, 6))
         ttk.Button(buttons3, text="Load", style="Boss.TButton", command=self._load_game).pack(side="left")
 
-        save_row = ttk.Frame(controls)
+        save_row = tk.Frame(controls, bd=0, highlightthickness=0)
         save_row.pack(fill="x", pady=(10, 0))
         ttk.Label(save_row, text="Name:").pack(side="left")
-        self.save_entry = ttk.Entry(save_row, width=18)
-        self.save_entry.pack(side="left", padx=(6, 0))
+        self.save_entry = ttk.Entry(save_row, width=20)
+        self.save_entry.pack(side="left", padx=(8, 0))
         self.save_entry.insert(0, "autosave")
 
-        options = ttk.Labelframe(side, text="Modes & Theme", style="Boss.TLabelframe")
+        options = ttk.Labelframe(right_stack, text="Modes & Theme", style="Boss.TLabelframe")
         options.pack(fill="x", pady=(12, 0))
         self.trainer_var = tk.BooleanVar(value=self.session.config.trainer)
         self.meme_var = tk.BooleanVar(value=self.session.config.meme)
@@ -172,15 +258,47 @@ class BossChessApp:
         ttk.Checkbutton(options, text="Meme", variable=self.meme_var, command=self._sync_modes).pack(anchor="w")
         ttk.Checkbutton(options, text="Cheat", variable=self.cheat_var, command=self._sync_modes).pack(anchor="w")
         ttk.Checkbutton(options, text="Sound", variable=self.sound_var).pack(anchor="w")
-        theme_row = ttk.Frame(options)
+        theme_row = tk.Frame(options, bd=0, highlightthickness=0)
         theme_row.pack(fill="x", pady=(8, 0))
         ttk.Label(theme_row, text="Theme:").pack(side="left")
         self.theme_var = tk.StringVar(value=self.theme.name)
         theme_box = ttk.Combobox(theme_row, textvariable=self.theme_var, values=list(THEMES.keys()), state="readonly", width=12)
-        theme_box.pack(side="left", padx=(6, 0))
+        theme_box.pack(side="left", padx=(8, 0))
         theme_box.bind("<<ComboboxSelected>>", lambda _event: self._set_theme(self.theme_var.get()))
 
         self._build_board()
+
+    def _apply_theme(self) -> None:
+        palette = self.theme.palette
+        self.root.configure(bg=palette["window"])
+        self.main.configure(bg=palette["window"])
+        self.header.configure(bg=palette["window"])
+        self.main['bg'] = palette["window"]
+        self._style_text_widget(self.move_text, palette)
+        self._style_text_widget(self.message_text, palette)
+        self.history_canvas.configure(bg=palette["surface"], highlightbackground=palette["panel_border"])
+        self.eval_canvas.configure(bg=palette["surface"], highlightbackground=palette["panel_border"])
+        self.board_frame.configure(bg=palette["surface"])
+        for child in (self.board_frame,):
+            try:
+                child.configure(bg=palette["surface"])
+            except tk.TclError:
+                pass
+        self._refresh_board_button_colors()
+        self.refresh_all()
+
+    def _style_text_widget(self, widget: tk.Text, palette: dict[str, str]) -> None:
+        widget.configure(
+            bg=palette["surface"],
+            fg=palette["text"],
+            insertbackground=palette["text"],
+            highlightbackground=palette["panel_border"],
+            highlightcolor=palette["accent"],
+            relief="solid",
+            borderwidth=1,
+            padx=10,
+            pady=10,
+        )
 
     def _build_board(self) -> None:
         for child in self.board_frame.winfo_children():
@@ -191,14 +309,27 @@ class BossChessApp:
         for row, rank in enumerate(ranks):
             for col, file in enumerate(files):
                 square = chess.square(file, rank)
-                btn = tk.Button(self.board_frame, text="", font=("Segoe UI Symbol", 24), width=3, height=1, relief="flat", command=lambda sq=square: self._square_clicked(sq))
-                btn.grid(row=row, column=col, sticky="nsew")
-                self.square_buttons[square] = btn
+                button = tk.Button(
+                    self.board_frame,
+                    text="",
+                    image="",
+                    compound="center",
+                    width=74,
+                    height=74,
+                    bd=0,
+                    highlightthickness=0,
+                    relief="flat",
+                    cursor="hand2",
+                    command=lambda sq=square: self._square_clicked(sq),
+                )
+                button.grid(row=row, column=col, sticky="nsew")
+                self.square_buttons[square] = button
         for i in range(8):
             self.board_frame.columnconfigure(i, weight=1)
             self.board_frame.rowconfigure(i, weight=1)
 
     def refresh_all(self) -> None:
+        self._refresh_header()
         self._render_board()
         self._refresh_status()
         self._refresh_captured()
@@ -210,6 +341,21 @@ class BossChessApp:
         if self.session.state.board.is_game_over():
             self.eval_var.set(self._game_over_text())
 
+    def _refresh_header(self) -> None:
+        turn = "White" if self.session.state.board.turn == chess.WHITE else "Black"
+        badges = [variant_label(self.session.state.variant), turn, self._mode_line_text()]
+        self.mode_badge_var.set("  •  ".join(badges))
+
+    def _mode_line_text(self) -> str:
+        active: list[str] = []
+        if self.session.config.trainer:
+            active.append("Trainer")
+        if self.session.config.meme:
+            active.append("Meme")
+        if self.session.config.cheat:
+            active.append("Cheat")
+        return ", ".join(active) if active else "Normal"
+
     def _render_board(self) -> None:
         palette = self.theme.palette
         board = self.session.state.board
@@ -217,21 +363,33 @@ class BossChessApp:
         last_move = board.move_stack[-1] if board.move_stack else None
         selected = self.selected_square
         check_square = board.king(board.turn) if board.is_check() else None
+
         for square, button in self.square_buttons.items():
             piece = board.piece_at(square)
-            label = UNICODE_PIECES.get(piece.symbol(), piece.symbol()) if piece else ""
-            button.configure(text=label)
-            base = palette["light"] if (chess.square_file(square) + chess.square_rank(square)) % 2 == 0 else palette["dark"]
+            image = self._piece_image(piece)
+            button.configure(image=image, text="")
+            button.image = image
+            base = palette["board_light"] if (chess.square_file(square) + chess.square_rank(square)) % 2 == 0 else palette["board_dark"]
             if selected == square:
                 base = palette["selected"]
             elif square in legal_targets:
                 base = palette["hint"]
             elif last_move and square in {last_move.from_square, last_move.to_square}:
-                base = "#d4a373"
+                base = palette["last"]
             elif check_square == square:
-                base = "#ff7b7b"
+                base = palette["check"]
             fg = "#111111" if not piece or piece.color == chess.WHITE else "#f4f4f4"
             button.configure(bg=base, activebackground=base, fg=fg, highlightthickness=0, bd=0)
+
+    def _piece_image(self, piece: chess.Piece | None):
+        if piece is None:
+            return ""
+        return self._piece_images.get(piece.symbol(), "")
+
+    def _refresh_board_button_colors(self) -> None:
+        if not self.square_buttons:
+            return
+        self._render_board()
 
     def _refresh_status(self) -> None:
         status = self.session.status_text()
@@ -255,45 +413,50 @@ class BossChessApp:
         self._set_text(self.message_text, "\n\n".join(self.message_lines[-16:]) if self.message_lines else "Ready.")
 
     def _refresh_eval_bar(self) -> None:
+        palette = self.theme.palette
         self.eval_canvas.delete("all")
+        self.eval_canvas.configure(bg=palette["surface"])
         if self.session.state.board.is_game_over():
-            self.eval_canvas.create_rectangle(0, 0, 56, 220, fill="#888888", outline="")
+            self.eval_canvas.create_rectangle(0, 0, 64, 240, fill=palette["surface_alt"], outline="")
             return
         analysis = self.session.engine.analyse(self.session.state.board, max_lines=3)
         self.eval_var.set(f"{analysis.summary}\nBest: {analysis.best_move.uci() if analysis.best_move else 'n/a'}")
         score = max(-1200, min(1200, analysis.best_score))
         white_portion = max(0.0, min(1.0, 0.5 - score / 2400.0))
-        split = int(220 * white_portion)
-        self.eval_canvas.create_rectangle(0, 0, 56, split, fill="#f8f8f8", outline="")
-        self.eval_canvas.create_rectangle(0, split, 56, 220, fill="#202020", outline="")
-        self.eval_canvas.create_line(0, 110, 56, 110, fill="#666666")
-        self.eval_canvas.create_text(28, 16, text="W", fill="#111111")
-        self.eval_canvas.create_text(28, 204, text="B", fill="#f1f1f1")
+        split = int(240 * white_portion)
+        self.eval_canvas.create_rectangle(0, 0, 64, split, fill=palette["surface_alt"], outline="")
+        self.eval_canvas.create_rectangle(0, split, 64, 240, fill=palette["window"], outline="")
+        self.eval_canvas.create_line(0, 120, 64, 120, fill=palette["line"])
+        self.eval_canvas.create_text(32, 16, text="W", fill=palette["text"])
+        self.eval_canvas.create_text(32, 224, text="B", fill=palette["text"])
 
     def _draw_eval_history(self) -> None:
+        palette = self.theme.palette
         self.history_canvas.delete("all")
+        self.history_canvas.configure(bg=palette["surface"])
         history = self.session.eval_graph()
-        self.history_canvas.create_text(8, 8, anchor="nw", text="Eval history", fill="#ffffff")
+        self.history_canvas.create_text(10, 10, anchor="nw", text="Eval history", fill=palette["text"])
         if not history:
-            self.history_canvas.create_text(8, 28, anchor="nw", text="No moves yet.", fill="#cccccc")
+            self.history_canvas.create_text(10, 34, anchor="nw", text="No moves yet.", fill=palette["muted"])
             return
         points = history[-40:]
-        width = 320
-        height = 100
-        cx = 12
-        cy = height // 2
-        self.history_canvas.create_line(0, cy, width, cy, fill="#666666")
-        step = max(1, (width - 24) // max(1, len(points) - 1))
+        width = 500
+        height = 120
+        base_y = height // 2
+        self.history_canvas.create_line(0, base_y, width, base_y, fill=palette["line"])
+        step = max(1, (width - 30) // max(1, len(points) - 1))
         coords: list[int] = []
         for i, score in enumerate(points):
-            x = cx + i * step
-            y = int(cy - max(-40, min(40, score / 30)))
+            x = 16 + i * step
+            y = int(base_y - max(-44, min(44, score / 30)))
             coords.extend([x, y])
         if len(coords) >= 4:
-            self.history_canvas.create_line(*coords, fill="#8fd3ff", width=2)
-        self.history_canvas.create_text(250, 8, anchor="nw", text=f"Current: {points[-1]/100:+.2f}", fill="#ffffff")
+            self.history_canvas.create_line(*coords, fill=palette["accent"], width=2)
+        self.history_canvas.create_text(390, 10, anchor="nw", text=f"Current: {points[-1] / 100:+.2f}", fill=palette["text"])
 
     def _set_text(self, widget: tk.Text, value: str) -> None:
+        palette = self.theme.palette
+        widget.configure(bg=palette["surface"], fg=palette["text"], highlightbackground=palette["panel_border"], highlightcolor=palette["accent"])
         widget.configure(state="normal")
         widget.delete("1.0", "end")
         widget.insert("end", value)
@@ -302,7 +465,7 @@ class BossChessApp:
     def _set_theme(self, name: str) -> None:
         if name in THEMES:
             self.theme.name = name
-            self.refresh_all()
+            self._apply_theme()
 
     def _sync_modes(self) -> None:
         self.session.config.trainer = self.trainer_var.get()
@@ -338,6 +501,7 @@ class BossChessApp:
             if variant_changed:
                 self.session.reset()
                 self._append_message("Variant changed; started a new game.")
+            self._apply_theme()
             self.refresh_all()
             self._append_message("Settings updated.")
 
@@ -367,7 +531,7 @@ class BossChessApp:
         board_before = self.session.state.board.copy(stack=False)
         moving_piece = board_before.piece_at(move.from_square)
         result = self.session.human_move(move)
-        self._animate_and_finish(move, self._piece_symbol(moving_piece), lambda: self._after_human_move(result))
+        self._animate_and_finish(move, self._piece_image(moving_piece), lambda: self._after_human_move(result))
 
     def _after_human_move(self, result: str) -> None:
         self._append_message(result)
@@ -404,7 +568,7 @@ class BossChessApp:
         if outcome is None:
             return
         moving_piece = pre_board.piece_at(outcome.move.from_square)
-        self._animate_and_finish(outcome.move, self._piece_symbol(moving_piece), lambda: self._after_ai_move(outcome))
+        self._animate_and_finish(outcome.move, self._piece_image(moving_piece), lambda: self._after_ai_move(outcome))
 
     def _after_ai_move(self, outcome: AiMoveOutcome) -> None:
         for message in outcome.messages:
@@ -439,6 +603,7 @@ class BossChessApp:
             self.selected_square = None
             self._append_message(f"Loaded {path.as_posix()}")
             self._sync_mode_checkboxes()
+            self._apply_theme()
             self.refresh_all()
             self.root.after(120, self._maybe_ai_turn)
         except Exception as exc:
@@ -457,6 +622,7 @@ class BossChessApp:
         self.selected_square = None
         self._append_message("New game started.")
         self._sync_mode_checkboxes()
+        self._apply_theme()
         self.refresh_all()
         self.root.after(120, self._maybe_ai_turn)
 
@@ -505,25 +671,15 @@ class BossChessApp:
         color = chess.WHITE if white else chess.BLACK
         return " ".join(UNICODE_PIECES[chess.Piece(piece_type, color).symbol()] for piece_type in piece_types)
 
-    def _piece_symbol(self, piece: chess.Piece | None) -> str:
-        return UNICODE_PIECES.get(piece.symbol(), piece.symbol()) if piece else ""
-
-    def _play_sound(self) -> None:
-        if self.sound_var.get():
-            try:
-                self.root.bell()
-            except tk.TclError:
-                pass
-
     def _maybe_signal_event(self) -> None:
         board = self.session.state.board
-        if board.is_checkmate() or board.is_check():
-            self._play_sound()
+        if board.is_check() or board.is_checkmate():
+            self.root.bell()
         if board.is_checkmate():
             self._append_message("Checkmate!")
             self.session.game_over_report()
 
-    def _animate_and_finish(self, move: chess.Move, piece_symbol: str, on_complete: Callable[[], None]) -> None:
+    def _animate_and_finish(self, move: chess.Move, piece_image, on_complete: Callable[[], None]) -> None:
         self.animating = True
         self.root.update_idletasks()
         start_button = self.square_buttons.get(move.from_square)
@@ -532,17 +688,18 @@ class BossChessApp:
             self.animating = False
             on_complete()
             return
-        start_button.configure(text="")
-        end_button.configure(text="")
+        start_button.configure(text="", image="")
+        end_button.configure(text="", image="")
         self.root.update_idletasks()
         start_x, start_y = start_button.winfo_x(), start_button.winfo_y()
         end_x, end_y = end_button.winfo_x(), end_button.winfo_y()
         width, height = start_button.winfo_width(), start_button.winfo_height()
-        bg = self._square_background(move.from_square)
+        bg = start_button.cget("bg")
         if self._animation_label is not None:
             self._animation_label.destroy()
-        label = tk.Label(self.board_frame, text=piece_symbol, font=("Segoe UI Symbol", 24), bg=bg, fg=self._piece_foreground(piece_symbol), bd=0, highlightthickness=0)
+        label = tk.Label(self.board_frame, image=piece_image, bg=bg, bd=0, highlightthickness=0)
         self._animation_label = label
+        label.image = piece_image
         label.place(x=start_x, y=start_y, width=width, height=height)
         steps = 10
         duration_ms = 16
@@ -564,7 +721,7 @@ class BossChessApp:
 
     def _square_background(self, square: int) -> str:
         palette = self.theme.palette
-        return palette["light"] if (chess.square_file(square) + chess.square_rank(square)) % 2 == 0 else palette["dark"]
+        return palette["board_light"] if (chess.square_file(square) + chess.square_rank(square)) % 2 == 0 else palette["board_dark"]
 
     def _piece_foreground(self, piece_symbol: str) -> str:
         return "#f4f4f4" if piece_symbol.islower() else "#111111"
@@ -583,6 +740,7 @@ class BossChessApp:
         self.theme.name = "Classic"
         self._build_board()
         self.theme_var.set(self.theme.name)
+        self._apply_theme()
         self.refresh_all()
 
     def _game_over_text(self) -> str:
