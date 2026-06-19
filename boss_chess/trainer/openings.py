@@ -41,8 +41,10 @@ class OpeningRecognizer:
         name = self.identify(list(board.move_stack))
         if name == "Unclassified opening":
             return "Develop pieces, castle, and fight for the center."
-        if "Pawn Opening" in name:
-            return "Claim the center, finish development, and keep the king safe.">
+        if name == "King's Pawn Opening":
+            return "Claim the center and develop quickly behind the pawn chain."
+        if name == "Queen's Pawn Opening":
+            return "Build a sturdy center and prepare c-pawn pressure."
         if name == "Ruy Lopez":
             return "Pressure the e5 pawn, castle early, and prepare the bishop pair."
         if name == "Italian Game":
