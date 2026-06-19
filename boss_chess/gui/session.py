@@ -66,6 +66,8 @@ class GuiSession:
             lines.append(f"Last move: {self.state.move_history[-1].uci()}")
         if self.state.board.is_check():
             lines.append("Check!")
+        if self.config.meme:
+            lines.append(self.memes.status_line())
         if self.config.cheat:
             lines.extend(self.cheat.boss_banner())
             lines.append(f"Cheat: {self.cheat.last_event}")
@@ -95,7 +97,7 @@ class GuiSession:
         if self.config.trainer:
             messages.append(self.trainer.review_move(board_before, move))
         if self.config.meme:
-            messages.append(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
+            messages.append(self.memes.get_context_line())
         if self.config.cheat and not self.cheat.boss_intro_shown:
             messages.extend(self.cheat.boss_banner())
             self.cheat.boss_intro_shown = True
@@ -122,7 +124,7 @@ class GuiSession:
             messages.append(f"Cheat event: {self.cheat.last_event}")
 
         if self.config.meme:
-            messages.append(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
+            messages.append(self.memes.get_context_line())
 
         while self.config.cheat and self.cheat.extra_turns > 0 and not self.state.board.is_game_over():
             self.cheat.extra_turns -= 1
