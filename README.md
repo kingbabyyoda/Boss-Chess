@@ -4,7 +4,7 @@ A local Python chess project with four stacked modes and a polished graphical in
 
 - **Normal mode** — plays a solid game of chess.
 - **Trainer mode** — explains mistakes and suggests better moves.
-- **Meme mode** — adds AnarchyChess-style jokes and can pull recent post titles from `r/AnarchyChess`.
+- **Meme mode** — adds AnarchyChess-style jokes, caches Reddit titles, and can pull live post titles from `r/AnarchyChess`.
 - **Cheat mode** — turns the AI into a boss fight with health, phases, and increasingly unfair abilities.
 - **GUI mode** — a tkinter desktop window with a clickable board, animations, captured pieces, evaluation bar, save/load controls, and live status panels.
 
@@ -20,7 +20,8 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Built-in opening book for early-game play
 - Heuristic evaluation with piece-square tables, king safety, mobility, and passed pawns
 - Trainer feedback loop
-- Meme provider with Reddit fallback cache
+- Meme provider with live Reddit fetching and disk-backed cache
+- Meme personalities and context lines for the terminal and GUI
 - Boss-style cheat events
 - Boss health, phase changes, boss meter, and boss HUD lines
 - Save-friendly architecture
@@ -91,9 +92,8 @@ Boss-Chess-main/
 │   ├── utils.py
 │   ├── engine/
 │   ├── gui/
-│   ├── modes/
-│   ├── trainer/
 │   ├── memes/
+│   ├── trainer/
 │   ├── cheat_events/
 │   └── ui/
 ├── docs/
@@ -117,8 +117,10 @@ After your move, the trainer prints a short analysis:
 ### Meme
 Meme mode can:
 - print joke commentary
-- use cached AnarchyChess-style one-liners
-- fetch recent `r/AnarchyChess` post titles if network access is available
+- cache titles from `r/AnarchyChess` on disk
+- fetch fresh `r/AnarchyChess` post titles if network access is available
+- switch between multiple AnarchyChess-style personalities
+- print a combined personality/title context line
 
 ### Cheat
 Cheat mode is meant for a local single-player boss fight. It can:
