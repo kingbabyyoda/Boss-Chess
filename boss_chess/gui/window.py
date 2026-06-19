@@ -9,6 +9,7 @@ from tkinter import messagebox, simpledialog, ttk
 
 from boss_chess.gui.session import AiMoveOutcome, GuiSession
 from boss_chess.gui.settings_dialog import SettingsDialog
+from boss_chess.types import GameVariant
 
 UNICODE_PIECES = {
     "P": "♙",
@@ -316,6 +317,10 @@ class BossChessApp:
         dialog = SettingsDialog(self.root, self.session.config, self.theme.name)
         self.root.wait_window(dialog.window)
         if dialog.result and dialog.result.saved:
+            variant_changed = (
+                self.session.config.variant.name.value != dialog.result.variant
+                or self.session.config.variant.chess960_seed != dialog.result.chess960_seed
+            )
             self.session.config.engine.depth = dialog.result.depth
             self.session.config.engine.use_stockfish = dialog.result.use_stockfish
             self.session.config.engine.use_opening_book = dialog.result.use_opening_book
@@ -324,10 +329,15 @@ class BossChessApp:
             self.session.config.trainer = dialog.result.trainer
             self.session.config.meme = dialog.result.meme
             self.session.config.cheat = dialog.result.cheat
+            self.session.config.variant.name = GameVariant(dialog.result.variant)
+            self.session.config.variant.chess960_seed = dialog.result.chess960_seed
             self.theme.name = dialog.result.theme
             self.theme_var.set(self.theme.name)
             self.session.engine = self.session._build_engine()
             self.session.trainer = self.session.trainer.__class__(self.session.engine)
+            if variant_changed:
+                self.session.reset()
+                self._append_message("Variant changed; started a new game.")
             self.refresh_all()
             self._append_message("Settings updated.")
 
