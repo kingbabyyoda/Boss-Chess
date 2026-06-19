@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import random
 
 import chess
@@ -12,12 +12,8 @@ from boss_chess.trainer.report import PracticePrompt
 
 @dataclass(slots=True)
 class PuzzleGenerator:
-    openings: OpeningRecognizer = dataclass(init=False)  # type: ignore[assignment]
-    motifs: TacticalMotifDetector = dataclass(init=False)  # type: ignore[assignment]
-
-    def __post_init__(self) -> None:
-        self.openings = OpeningRecognizer()
-        self.motifs = TacticalMotifDetector()
+    openings: OpeningRecognizer = field(default_factory=OpeningRecognizer)
+    motifs: TacticalMotifDetector = field(default_factory=TacticalMotifDetector)
 
     def generate(self, board: chess.Board, side_to_move: chess.Color | None = None) -> PracticePrompt:
         side = side_to_move if side_to_move is not None else board.turn
@@ -36,7 +32,9 @@ class PuzzleGenerator:
         )
 
     def _choose_target_move(self, board: chess.Board, side: chess.Color) -> chess.Move:
-        legal = [move for move in board.legal_moves if board.turn == side]
+        if board.turn != side:
+            board = board.copy(stack=False)
+        legal = list(board.legal_moves)
         if not legal:
             return chess.Move.null()
 
@@ -61,8 +59,7 @@ class PuzzleGenerator:
         return "General calculation"
 
     def _clue_for(self, board: chess.Board, move: chess.Move) -> str:
-        motif = self.motifs.detect(board, move)
-        return motif.explanation
+        return self.motifs.detect(board, move).explanation
 
     def _explanation_for(self, board: chess.Board, move: chess.Move) -> str:
         piece = board.piece_at(move.from_square)
