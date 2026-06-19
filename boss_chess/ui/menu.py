@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from boss_chess.types import GameConfig
+from boss_chess.types import GameConfig, GameVariant
 
 
 def ask_bool(prompt: str, default: bool = False) -> bool:
@@ -30,12 +30,41 @@ def ask_int(prompt: str, default: int, minimum: int = 1, maximum: int = 8) -> in
         print(f"Enter a number between {minimum} and {maximum}.")
 
 
+def ask_choice(prompt: str, choices: list[str], default_index: int = 0) -> str:
+    while True:
+        options = "/".join(f"{choice}" if i != default_index else f"[{choice}]" for i, choice in enumerate(choices))
+        response = input(f"{prompt} {options} ").strip().lower()
+        if not response:
+            return choices[default_index]
+        for choice in choices:
+            if response == choice.lower():
+                return choice
+        print(f"Choose one of: {', '.join(choices)}")
+
+
 def configure_game() -> GameConfig:
     print("Choose your modes:")
     trainer = ask_bool("Enable trainer mode?", False)
     meme = ask_bool("Enable meme mode?", False)
     cheat = ask_bool("Enable cheat mode?", False)
     ai_white = ask_bool("Should the AI play White?", False)
+
+    print("\nGame variant:")
+    variant_choice = ask_choice("Select variant", ["standard", "chess960", "king_of_the_hill", "three_check", "atomic", "racing_kings"], 0)
+    chess960_seed = 0
+    if variant_choice == "chess960":
+        chess960_seed = ask_int("Chess960 seed", 0, 0, 959)
+
+    print("\nMultiplayer:")
+    mp_mode = ask_choice("Multiplayer mode", ["offline", "host", "join"], 0)
+    mp_host = "127.0.0.1"
+    mp_port = 8765
+    mp_username = input("Username [Player] ").strip() or "Player"
+    if mp_mode == "join":
+        mp_host = input("Host address [127.0.0.1] ").strip() or "127.0.0.1"
+        mp_port = ask_int("Host port", 8765, 1, 65535)
+    elif mp_mode == "host":
+        mp_port = ask_int("Listen port", 8765, 1, 65535)
 
     print("\nStrong AI settings:")
     depth = ask_int("Search depth (higher = stronger, slower)", 4, 1, 6)
@@ -58,4 +87,10 @@ def configure_game() -> GameConfig:
     config.engine.stockfish_path = stockfish_path
     config.engine.target_elo = target_elo
     config.engine.multi_pv = multi_pv
+    config.variant.name = GameVariant(variant_choice)
+    config.variant.chess960_seed = chess960_seed
+    config.multiplayer.mode = mp_mode
+    config.multiplayer.host = mp_host
+    config.multiplayer.port = mp_port
+    config.multiplayer.username = mp_username
     return config
