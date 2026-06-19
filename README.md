@@ -22,7 +22,7 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Trainer feedback loop
 - Meme provider with Reddit fallback cache
 - Boss-style cheat events
-- Boss health, phase changes, and boss-meter display
+- Boss health, phase changes, boss meter, and boss HUD lines
 - Save-friendly architecture
 - Tkinter GUI with clickable board and move animation
 - Board flip and reset view controls
@@ -130,6 +130,7 @@ Cheat mode is meant for a local single-player boss fight. It can:
 - corrupt the board state
 - drop through boss phases as its health falls
 - trigger a final-boss phase when the health bar gets low
+- show boss HUD lines with the boss name, phase name, and HP meter
 
 ### GUI
 The GUI mode includes:
