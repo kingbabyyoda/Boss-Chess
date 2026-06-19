@@ -67,6 +67,7 @@ class GuiSession:
         if self.state.board.is_check():
             lines.append("Check!")
         if self.config.cheat:
+            lines.append(self.cheat.boss_meter())
             lines.append(f"Cheat: {self.cheat.last_event}")
             if self.cheat.event_log:
                 lines.append(f"Chaos log: {self.cheat.event_log[-1]}")
@@ -88,13 +89,16 @@ class GuiSession:
         captured = self.state.board.piece_at(move.to_square)
         self.state.push(move)
         if captured:
-            self.cheat.note_capture(captured)
+            self.cheat.note_capture(captured, self.ai_color)
 
         messages: list[str] = []
         if self.config.trainer:
             messages.append(self.trainer.review_move(board_before, move))
         if self.config.meme:
             messages.append(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
+        if self.config.cheat and not self.cheat.boss_intro_shown:
+            messages.append(self.cheat.intro_line())
+            self.cheat.boss_intro_shown = True
         self._autosave()
         return "\n".join(messages) if messages else "Move played."
 
@@ -107,10 +111,13 @@ class GuiSession:
         captured = self.state.board.piece_at(move.to_square)
         self.state.push(move)
         if captured:
-            self.cheat.note_capture(captured)
+            self.cheat.note_capture(captured, self.ai_color)
         messages.append(f"AI plays {move.uci()}")
 
         if self.config.cheat:
+            if not self.cheat.boss_intro_shown:
+                messages.append(self.cheat.intro_line())
+                self.cheat.boss_intro_shown = True
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
 
@@ -123,7 +130,7 @@ class GuiSession:
             cap = self.state.board.piece_at(extra.to_square)
             self.state.push(extra)
             if cap:
-                self.cheat.note_capture(cap)
+                self.cheat.note_capture(cap, self.ai_color)
             messages.append(f"AI steals another move: {extra.uci()}")
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
