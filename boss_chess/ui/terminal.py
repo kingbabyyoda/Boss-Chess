@@ -54,6 +54,9 @@ class TerminalGame:
         print("=== Boss Chess ===")
         print("Type 'help' for commands.")
         print(self._mode_line())
+        if self.config.cheat:
+            print(self.cheat.intro_line())
+            self.cheat.boss_intro_shown = True
 
     def _mode_line(self) -> str:
         active = ["AI White" if self.ai_color == chess.WHITE else "AI Black"]
@@ -72,6 +75,7 @@ class TerminalGame:
         print(self._mode_line())
         print(self._history_line())
         if self.config.cheat:
+            print(self.cheat.boss_meter())
             print(f"Cheat event: {self.cheat.last_event}")
             if self.cheat.event_log:
                 print("Recent chaos: " + " | ".join(self.cheat.event_log[-3:]))
@@ -101,6 +105,9 @@ class TerminalGame:
                 self.state.reset()
                 self.cheat = CheatController()
                 print("New game started.")
+                if self.config.cheat:
+                    print(self.cheat.intro_line())
+                    self.cheat.boss_intro_shown = True
                 return
             if lower == "undo":
                 self._undo()
@@ -145,12 +152,15 @@ class TerminalGame:
             captured = self.state.board.piece_at(move.to_square)
             self.state.push(move)
             if captured:
-                self.cheat.note_capture(captured)
+                self.cheat.note_capture(captured, self.ai_color)
 
             if self.config.trainer:
                 print(self.trainer.review_move(board_before, move))
             if self.config.meme:
                 print(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
+            if self.config.cheat and not self.cheat.boss_intro_shown:
+                print(self.cheat.intro_line())
+                self.cheat.boss_intro_shown = True
 
             self._autosave()
             return
@@ -175,10 +185,13 @@ class TerminalGame:
         captured = self.state.board.piece_at(move.to_square)
         self.state.push(move)
         if captured:
-            self.cheat.note_capture(captured)
+            self.cheat.note_capture(captured, self.ai_color)
 
         messages = [f"AI plays {move.uci()}"]
         if self.config.cheat:
+            if not self.cheat.boss_intro_shown:
+                messages.append(self.cheat.intro_line())
+                self.cheat.boss_intro_shown = True
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
         if self.config.meme:
@@ -190,7 +203,7 @@ class TerminalGame:
             cap = self.state.board.piece_at(extra.to_square)
             self.state.push(extra)
             if cap:
-                self.cheat.note_capture(cap)
+                self.cheat.note_capture(cap, self.ai_color)
             messages.append(f"AI steals another move: {extra.uci()}")
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
