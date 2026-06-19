@@ -14,7 +14,8 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Clean multi-file structure
 - Package-based code in `boss_chess/`
 - Legal move validation with `python-chess`
-- Simple alpha-beta engine
+- Alpha-beta search with quiescence and transposition-table caching
+- Heuristic evaluation with piece-square tables, king safety, mobility, and passed pawns
 - Trainer feedback loop
 - Meme provider with Reddit fallback cache
 - Boss-style cheat events
@@ -72,7 +73,7 @@ Boss-Chess-main/
 ## Modes
 
 ### Normal
-Plays a legal chess game using the built-in engine. If you later add Stockfish, the project structure is already ready for it.
+Plays a legal chess game using the built-in engine. Optional Stockfish support can be added later without changing the architecture.
 
 ### Trainer
 After your move, the trainer prints a short analysis:
