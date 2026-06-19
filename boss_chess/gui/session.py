@@ -32,10 +32,20 @@ class GuiSession:
     saves_dir: Path = field(default_factory=lambda: Path("saves"))
 
     def __post_init__(self) -> None:
-        self.engine = ChessEngine(depth=self.config.engine.depth)
+        self.engine = self._build_engine()
         self.trainer = Trainer(self.engine)
         self.ai_color = chess.BLACK if not self.config.ai_plays_white else chess.WHITE
         self.saves_dir.mkdir(parents=True, exist_ok=True)
+
+    def _build_engine(self) -> ChessEngine:
+        return ChessEngine(
+            depth=self.config.engine.depth,
+            use_stockfish=self.config.engine.use_stockfish,
+            stockfish_path=self.config.engine.stockfish_path,
+            use_opening_book=self.config.engine.use_opening_book,
+            target_elo=self.config.engine.target_elo,
+            multi_pv=self.config.engine.multi_pv,
+        )
 
     def current_turn_label(self) -> str:
         return "White" if self.state.board.turn == chess.WHITE else "Black"
@@ -144,7 +154,7 @@ class GuiSession:
         self.config = loaded.config
         self.ai_color = loaded.ai_color
         self.cheat = loaded.cheat
-        self.engine = ChessEngine(depth=self.config.engine.depth)
+        self.engine = self._build_engine()
         self.trainer = Trainer(self.engine)
         self.memes = MemeProvider()
         return path
