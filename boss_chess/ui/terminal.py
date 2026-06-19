@@ -50,6 +50,8 @@ class TerminalGame:
         print("=== Boss Chess ===")
         print("Type 'help' for commands.")
         print(self._mode_line())
+        if self.config.trainer:
+            print(self.trainer.analyse_opening(self.state.board))
         if self.config.meme:
             print(self.memes.status_line())
         if self.config.cheat:
@@ -73,6 +75,8 @@ class TerminalGame:
         print(f"Turn: {'White' if self.state.board.turn == chess.WHITE else 'Black'}")
         print(self._mode_line())
         print(self._history_line())
+        if self.config.trainer:
+            print(self.trainer.analyse_opening(self.state.board))
         if self.config.meme:
             print(self.memes.status_line())
         if self.config.cheat:
@@ -99,6 +103,8 @@ class TerminalGame:
                 self._help(); continue
             if lower == "new":
                 self.state.reset(); self.cheat = CheatController(); print("New game started.")
+                if self.config.trainer:
+                    print(self.trainer.analyse_opening(self.state.board))
                 if self.config.meme:
                     print(self.memes.status_line())
                 if self.config.cheat:
@@ -114,6 +120,18 @@ class TerminalGame:
                 print(self._pgn_text()); continue
             if lower == "eval":
                 print(self._evaluation_text()); continue
+            if lower == "report":
+                print(self.trainer.report_text(self.state.board)); continue
+            if lower == "lesson":
+                print(self.trainer.lesson_text(self.state.board)); continue
+            if lower in {"practice", "puzzle"}:
+                prompt = self.trainer.practice_prompt(self.state.board)
+                print(f"Puzzle theme: {prompt.theme}")
+                print(f"Opening: {prompt.opening_name}")
+                print(f"Clue: {prompt.clue}")
+                print(f"Target move: {prompt.target_move}")
+                print(f"Explanation: {prompt.explanation}")
+                continue
             if lower in {"save", "load"}:
                 print(f"Usage: {lower} <name>"); continue
             if lower == "saves":
@@ -163,6 +181,8 @@ class TerminalGame:
                 self._print_boss_banner(); self.cheat.boss_intro_shown = True
             self.cheat.apply(self.state.board, self.ai_color)
             messages.append(f"Cheat event: {self.cheat.last_event}")
+        if self.config.trainer:
+            messages.append(self.trainer.report_text(self.state.board))
         if self.config.meme:
             messages.append(self.memes.get_context_line())
         while self.config.cheat and self.cheat.extra_turns > 0 and not self.state.board.is_game_over():
@@ -189,13 +209,15 @@ class TerminalGame:
         else:
             print("Draw.")
         print(f"Result: {self.state.board.result(claim_draw=True)}")
+        if self.config.trainer:
+            print(self.trainer.report_text(self.state.board))
 
     def _undo(self) -> None:
         print("Nothing to undo." if self.state.pop() is None else "Undid the last move.")
         self._autosave()
 
     def _help(self) -> None:
-        print("Commands: e2e4, undo, fen, pgn, eval, save <name>, load <name>, saves, new, modes, help, quit")
+        print("Commands: e2e4, undo, fen, pgn, eval, report, lesson, practice, puzzle, save <name>, load <name>, saves, new, modes, help, quit")
 
     def _parse_move(self, text: str) -> chess.Move | None:
         try:
