@@ -20,28 +20,40 @@ PIECE_GLYPHS = {
     "k": "♚",
 }
 
+FONT_CANDIDATES = [
+    r"C:\Windows\Fonts\seguiemj.ttf",
+    r"C:\Windows\Fonts\segoeui.ttf",
+    r"C:\Windows\Fonts\arial.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+]
+
 WHITE_FILL = "#f8fafc"
 WHITE_OUTLINE = "#111827"
 BLACK_FILL = "#0f172a"
 BLACK_OUTLINE = "#f8fafc"
-FONT_CANDIDATES = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-]
 
 
-@lru_cache(maxsize=16)
-def _font_path() -> str:
+@lru_cache(maxsize=1)
+def _font_path() -> str | None:
     for candidate in FONT_CANDIDATES:
         if Path(candidate).exists():
             return candidate
-    raise FileNotFoundError("No suitable system font found for Boss Chess piece art.")
+    return None
 
 
 @lru_cache(maxsize=32)
-def _load_font(size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(_font_path(), size=size)
+def _load_font(size: int) -> ImageFont.ImageFont:
+    path = _font_path()
+    if path is None:
+        return ImageFont.load_default()
+    try:
+        return ImageFont.truetype(path, size=size)
+    except Exception:
+        return ImageFont.load_default()
 
 
 def _render_piece(symbol: str, size: int) -> Image.Image:
@@ -60,7 +72,6 @@ def _render_piece(symbol: str, size: int) -> Image.Image:
     x = (size - glyph_width) / 2 - bbox[0]
     y = (size - glyph_height) / 2 - bbox[1] - size * 0.03
 
-    # Soft shadow for depth.
     shadow_pos = (x + size * 0.03, y + size * 0.03)
     draw.text(
         shadow_pos,
@@ -70,7 +81,6 @@ def _render_piece(symbol: str, size: int) -> Image.Image:
         stroke_width=max(1, size // 20),
         stroke_fill=(0, 0, 0, 48),
     )
-
     draw.text(
         (x, y),
         glyph,
