@@ -1,13 +1,14 @@
 # Boss Chess
 
-A local Python chess project with four stacked modes:
+A local Python chess project with four stacked modes and now a graphical interface:
 
 - **Normal mode** — plays a solid game of chess.
 - **Trainer mode** — explains mistakes and suggests better moves.
 - **Meme mode** — adds AnarchyChess-style jokes and can pull recent post titles from `r/AnarchyChess`.
 - **Cheat mode** — intentionally unfair local-only chaos that can rewrite the board.
+- **GUI mode** — a tkinter desktop window with a clickable board, save/load controls, move log, and live status panel.
 
-This repo is set up as a clean, GitHub-style Python project with a package layout, config, tests, docs, and a terminal launcher.
+This repo is set up as a clean, GitHub-style Python project with a package layout, config, tests, docs, a terminal launcher, and a GUI launcher.
 
 ## Features
 
@@ -20,6 +21,7 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Meme provider with Reddit fallback cache
 - Boss-style cheat events
 - Save-friendly architecture
+- Tkinter GUI with clickable board
 - Tests and GitHub Actions workflow
 
 ## Requirements
@@ -36,9 +38,19 @@ pip install -r requirements.txt
 
 ## Run
 
+Terminal mode:
+
 ```bash
-python main.py
+python main.py --terminal
 ```
+
+GUI mode:
+
+```bash
+python main.py --gui
+```
+
+If you leave off the flag, Boss Chess asks which interface you want.
 
 ## Project layout
 
@@ -59,6 +71,7 @@ Boss-Chess-main/
 │   ├── types.py
 │   ├── utils.py
 │   ├── engine/
+│   ├── gui/
 │   ├── modes/
 │   ├── trainer/
 │   ├── memes/
@@ -97,6 +110,15 @@ Cheat mode is meant for a local single-player boss fight. It can:
 - grant an extra turn
 - corrupt the board state
 
+### GUI
+The GUI mode includes:
+- click-to-move board interaction
+- move history panel
+- evaluation button
+- save and load controls
+- theme switching
+- live trainer/meme/cheat status
+
 ## Controls
 
 Use UCI moves such as:
@@ -122,7 +144,6 @@ Other commands:
 
 ## Roadmap
 
-- Add GUI with drag-and-drop pieces
 - Add Stockfish support
 - Add opening book support
 - Add puzzle mode
