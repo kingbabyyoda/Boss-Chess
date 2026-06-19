@@ -1,12 +1,12 @@
 # Boss Chess
 
-A local Python chess project with four stacked modes and now a graphical interface:
+A local Python chess project with four stacked modes and a polished graphical interface:
 
 - **Normal mode** — plays a solid game of chess.
 - **Trainer mode** — explains mistakes and suggests better moves.
 - **Meme mode** — adds AnarchyChess-style jokes and can pull recent post titles from `r/AnarchyChess`.
 - **Cheat mode** — intentionally unfair local-only chaos that can rewrite the board.
-- **GUI mode** — a tkinter desktop window with a clickable board, save/load controls, move log, and live status panel.
+- **GUI mode** — a tkinter desktop window with a clickable board, animations, captured pieces, evaluation bar, save/load controls, and live status panels.
 
 This repo is set up as a clean, GitHub-style Python project with a package layout, config, tests, docs, a terminal launcher, and a GUI launcher.
 
@@ -21,7 +21,11 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Meme provider with Reddit fallback cache
 - Boss-style cheat events
 - Save-friendly architecture
-- Tkinter GUI with clickable board
+- Tkinter GUI with clickable board and move animation
+- Board flip and reset view controls
+- Captured pieces display
+- Evaluation bar
+- Sound feedback
 - Tests and GitHub Actions workflow
 
 ## Requirements
@@ -113,10 +117,13 @@ Cheat mode is meant for a local single-player boss fight. It can:
 ### GUI
 The GUI mode includes:
 - click-to-move board interaction
-- move history panel
-- evaluation button
+- animated moves
+- board flipping
+- captured pieces display
+- evaluation meter
 - save and load controls
 - theme switching
+- sound feedback
 - live trainer/meme/cheat status
 
 ## Controls
