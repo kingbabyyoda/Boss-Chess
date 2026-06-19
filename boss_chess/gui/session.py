@@ -15,6 +15,12 @@ from boss_chess.types import GameConfig
 
 
 @dataclass(slots=True)
+class AiMoveOutcome:
+    move: chess.Move
+    messages: list[str]
+
+
+@dataclass(slots=True)
 class GuiSession:
     config: GameConfig
     state: GameState = field(default_factory=GameState)
@@ -48,6 +54,8 @@ class GuiSession:
         lines = [self.mode_text(), f"Turn: {self.current_turn_label()}"]
         if self.state.move_history:
             lines.append(f"Last move: {self.state.move_history[-1].uci()}")
+        if self.state.board.is_check():
+            lines.append("Check!")
         if self.config.cheat:
             lines.append(f"Cheat: {self.cheat.last_event}")
             if self.cheat.event_log:
@@ -80,9 +88,9 @@ class GuiSession:
         self._autosave()
         return "\n".join(messages) if messages else "Move played."
 
-    def ai_move(self) -> list[str]:
+    def ai_move(self) -> AiMoveOutcome | None:
         if self.state.board.is_game_over() or self.state.board.turn != self.ai_color:
-            return []
+            return None
 
         messages: list[str] = []
         move = self.engine.pick_move(self.state.board)
@@ -111,7 +119,7 @@ class GuiSession:
             messages.append(f"Cheat event: {self.cheat.last_event}")
 
         self._autosave()
-        return messages
+        return AiMoveOutcome(move=move, messages=messages)
 
     def undo(self) -> str:
         if self.state.pop() is None:
