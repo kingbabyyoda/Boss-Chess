@@ -1,0 +1,8 @@
+[
+  "tests/test_cheat.py::test_cheat_controller_can_apply",
+  "tests/test_cheat.py::test_cheat_controller_initializes",
+  "tests/test_meme.py::test_meme_provider_returns_text",
+  "tests/test_persistence.py::test_save_and_load_round_trip",
+  "tests/test_smoke.py::test_choose_move_returns_legal_move",
+  "tests/test_smoke.py::test_evaluate_starting_board_is_numeric"
+]
