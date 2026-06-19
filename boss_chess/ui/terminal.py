@@ -6,6 +6,7 @@ import chess
 
 from boss_chess.cheat_events.core import CheatController
 from boss_chess.engine.engine import ChessEngine
+from boss_chess.gui.session import AiMoveOutcome
 from boss_chess.memes.provider import MemeProvider
 from boss_chess.persistence import load_game, save_game
 from boss_chess.state import GameState
@@ -145,32 +146,46 @@ class TerminalGame:
             return
 
     def _ai_turn(self) -> None:
+        outcome = self.session_ai_turn()
+        if outcome is None:
+            return
+        for message in outcome.messages:
+            print(message)
+        self._autosave()
+
+    def session_ai_turn(self) -> AiMoveOutcome | None:
+        if self.state.board.is_game_over() or self.state.board.turn != self.ai_color:
+            return None
+
+        outcome = self._direct_ai_move()
+        return outcome
+
+    def _direct_ai_move(self) -> AiMoveOutcome | None:
         move = self.engine.pick_move(self.state.board)
-        print(f"AI plays {move.uci()}")
         captured = self.state.board.piece_at(move.to_square)
         self.state.push(move)
         if captured:
             self.cheat.note_capture(captured)
 
+        messages = [f"AI plays {move.uci()}"]
         if self.config.cheat:
             self.cheat.apply(self.state.board, self.ai_color)
-            print(f"Cheat event: {self.cheat.last_event}")
-
+            messages.append(f"Cheat event: {self.cheat.last_event}")
         if self.config.meme:
-            print(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
+            messages.append(f"Meme [{self.memes.personality()}]: {self.memes.get_meme()}")
 
         while self.config.cheat and self.cheat.extra_turns > 0 and not self.state.board.is_game_over():
             self.cheat.extra_turns -= 1
             extra = self.engine.pick_move(self.state.board)
-            print(f"AI steals another move: {extra.uci()}")
             cap = self.state.board.piece_at(extra.to_square)
             self.state.push(extra)
             if cap:
                 self.cheat.note_capture(cap)
+            messages.append(f"AI steals another move: {extra.uci()}")
             self.cheat.apply(self.state.board, self.ai_color)
-            print(f"Cheat event: {self.cheat.last_event}")
+            messages.append(f"Cheat event: {self.cheat.last_event}")
 
-        self._autosave()
+        return AiMoveOutcome(move=move, messages=messages)
 
     def _game_over(self) -> None:
         print()
