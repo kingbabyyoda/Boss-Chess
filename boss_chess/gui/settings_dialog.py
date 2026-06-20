@@ -22,6 +22,10 @@ class SettingsResult:
     variant: str
     chess960_seed: int
     theme: str
+    ui_scale: float
+    reduce_motion: bool
+    high_contrast: bool
+    piece_set: str
 
 
 class SettingsDialog:
@@ -47,6 +51,10 @@ class SettingsDialog:
         self.theme_var = tk.StringVar(value=theme_name)
         self.variant_var = tk.StringVar(value=config.variant.name.value)
         self.chess960_seed_var = tk.IntVar(value=config.variant.chess960_seed)
+        self.ui_scale_var = tk.DoubleVar(value=config.ui_scale)
+        self.reduce_motion_var = tk.BooleanVar(value=config.reduce_motion)
+        self.high_contrast_var = tk.BooleanVar(value=config.high_contrast)
+        self.piece_set_var = tk.StringVar(value=config.piece_set)
 
         frame = ttk.Frame(self.window, padding=12)
         frame.pack(fill="both", expand=True)
@@ -67,8 +75,16 @@ class SettingsDialog:
         self._label_entry(frame, "Chess960 seed", self.chess960_seed_var, row); row += 1
 
         ttk.Label(frame, text="Theme").grid(row=row, column=0, sticky="w", pady=4)
-        ttk.Combobox(frame, textvariable=self.theme_var, values=["Classic", "Midnight", "Neon"], state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=4)
+        ttk.Combobox(frame, textvariable=self.theme_var, values=["Classic", "Midnight", "Neon", "High Contrast"], state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=4)
         row += 1
+
+        ttk.Label(frame, text="Piece set").grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Combobox(frame, textvariable=self.piece_set_var, values=["Classic", "Slate", "Neon"], state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=4)
+        row += 1
+
+        self._label_entry(frame, "UI scale", self.ui_scale_var, row); row += 1
+        self._check(frame, "Reduce motion", self.reduce_motion_var, row); row += 1
+        self._check(frame, "High contrast", self.high_contrast_var, row); row += 1
 
         buttons = ttk.Frame(frame)
         buttons.grid(row=row, column=0, columnspan=2, sticky="e", pady=(12, 0))
@@ -98,6 +114,10 @@ class SettingsDialog:
             variant=str(self.variant_var.get()),
             chess960_seed=int(self.chess960_seed_var.get()),
             theme=str(self.theme_var.get()),
+            ui_scale=float(self.ui_scale_var.get()),
+            reduce_motion=bool(self.reduce_motion_var.get()),
+            high_contrast=bool(self.high_contrast_var.get()),
+            piece_set=str(self.piece_set_var.get()),
         )
         self.window.destroy()
 
@@ -115,5 +135,9 @@ class SettingsDialog:
             variant=self.config.variant.name.value,
             chess960_seed=self.config.variant.chess960_seed,
             theme=self.theme_name,
+            ui_scale=self.config.ui_scale,
+            reduce_motion=self.config.reduce_motion,
+            high_contrast=self.config.high_contrast,
+            piece_set=self.config.piece_set,
         )
         self.window.destroy()
