@@ -6,8 +6,10 @@ import chess
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
+from boss_chess.gui.piece_art import build_piece_images
 from boss_chess.gui.window import BossChessApp
 from boss_chess.preferences import AppPreferences, save_preferences
+from boss_chess.types import GameVariant
 
 
 class ProductionBossChessApp(BossChessApp):
@@ -282,6 +284,7 @@ class ProductionBossChessApp(BossChessApp):
             self.theme_var.set(self.theme.name)
             self.session.engine = self.session._build_engine()
             self.session.trainer = self.session.trainer.__class__(self.session.engine)
+            self._piece_images = build_piece_images(self.root, size=74, piece_set=self.session.config.piece_set)
             if variant_changed:
                 self.session.reset()
                 self._append_message("Variant changed; started a new game.")
