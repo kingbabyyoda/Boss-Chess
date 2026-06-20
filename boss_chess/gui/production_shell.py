@@ -10,10 +10,35 @@ class ProductionBossChessApp(BossChessApp):
     def __init__(self, session):
         super().__init__(session)
         self._install_menu_bar()
+        self._install_quick_actions()
         self._install_status_strip()
         self.root.protocol("WM_DELETE_WINDOW", self._confirm_exit)
         self._append_message("Production shell loaded.")
         self.refresh_all()
+
+    def _install_quick_actions(self) -> None:
+        palette = self.theme.palette
+        self.quick_bar = tk.Frame(self.header, bg=palette["window"], highlightthickness=1, highlightbackground=palette["panel_border"])
+        self.quick_bar.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        for i in range(6):
+            self.quick_bar.columnconfigure(i, weight=0)
+        self.quick_bar.columnconfigure(6, weight=1)
+
+        tk.Label(
+            self.quick_bar,
+            text="Quick actions",
+            bg=palette["window"],
+            fg=palette["muted"],
+            font=("Segoe UI", 9, "bold"),
+            padx=12,
+            pady=8,
+        ).grid(row=0, column=0, sticky="w")
+        tk.Button(self.quick_bar, text="New Game", command=self._new_game_flow, bg=palette["surface"], fg=palette["text"], bd=0, padx=10, pady=6).grid(row=0, column=1, padx=(0, 6), pady=6)
+        tk.Button(self.quick_bar, text="Save", command=self._save_game, bg=palette["surface"], fg=palette["text"], bd=0, padx=10, pady=6).grid(row=0, column=2, padx=(0, 6), pady=6)
+        tk.Button(self.quick_bar, text="Load", command=self._load_game, bg=palette["surface"], fg=palette["text"], bd=0, padx=10, pady=6).grid(row=0, column=3, padx=(0, 6), pady=6)
+        tk.Button(self.quick_bar, text="Eval", command=self._show_eval, bg=palette["surface"], fg=palette["text"], bd=0, padx=10, pady=6).grid(row=0, column=4, padx=(0, 6), pady=6)
+        tk.Button(self.quick_bar, text="Export PGN", command=self._export_pgn, bg=palette["surface"], fg=palette["text"], bd=0, padx=10, pady=6).grid(row=0, column=5, padx=(0, 6), pady=6)
+        tk.Button(self.quick_bar, text="About", command=self._show_about, bg=palette["surface"], fg=palette["text"], bd=0, padx=10, pady=6).grid(row=0, column=6, sticky="e", padx=(0, 12), pady=6)
 
     def _install_status_strip(self) -> None:
         palette = self.theme.palette
@@ -33,7 +58,7 @@ class ProductionBossChessApp(BossChessApp):
 
     def _refresh_status_strip(self) -> None:
         board = self.session.state.board
-        turn = "White" if board.turn == 1 else "Black"
+        turn = "White" if board.turn == tk.TRUE else "Black"
         last = self.session.state.move_history[-1].uci() if self.session.state.move_history else "none"
         self.status_left.set(f"Turn: {turn}   Last move: {last}")
         self.status_center.set(f"Variant: {self.session.state.variant}")
@@ -55,7 +80,7 @@ class ProductionBossChessApp(BossChessApp):
         menubar = tk.Menu(self.root)
 
         file_menu = tk.Menu(menubar, tearoff=False)
-        file_menu.add_command(label="New Game", command=self._new_game, accelerator="Ctrl+N")
+        file_menu.add_command(label="New Game", command=self._new_game_flow, accelerator="Ctrl+N")
         file_menu.add_command(label="Save", command=self._save_game, accelerator="Ctrl+S")
         file_menu.add_command(label="Load", command=self._load_game, accelerator="Ctrl+O")
         file_menu.add_separator()
@@ -90,12 +115,20 @@ class ProductionBossChessApp(BossChessApp):
         menubar.add_cascade(label="Help", menu=help_menu)
 
         self.root.config(menu=menubar)
-        self.root.bind_all("<Control-n>", lambda _event: self._new_game())
+        self.root.bind_all("<Control-n>", lambda _event: self._new_game_flow())
         self.root.bind_all("<Control-s>", lambda _event: self._save_game())
         self.root.bind_all("<Control-o>", lambda _event: self._load_game())
         self.root.bind_all("<Control-z>", lambda _event: self._undo())
         self.root.bind_all("<Control-f>", lambda _event: self._flip_board())
         self.root.bind_all("<Control-e>", lambda _event: self._show_eval())
+
+    def _new_game_flow(self) -> None:
+        if not messagebox.askyesno("New Game", "Start a fresh game and discard the current board?"):
+            return
+        if messagebox.askyesno("New Game", "Reset the camera view and return to Classic theme?"):
+            self._reset_view()
+        self._new_game()
+        self._append_message("New game started.")
 
     def _toggle_trainer(self) -> None:
         self.trainer_var.set(not self.trainer_var.get())
