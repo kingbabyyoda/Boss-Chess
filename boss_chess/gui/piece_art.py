@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageTk
@@ -139,5 +140,6 @@ def _render_piece(symbol: str, size: int, piece_set: str) -> Image.Image:
     return Image.alpha_composite(shadow, base)
 
 
-def build_piece_images(master, size: int = 72, piece_set: str = "Classic") -> dict[str, ImageTk.PhotoImage]:
-    return {symbol: ImageTk.PhotoImage(_render_piece(symbol, size, piece_set), master=master) for symbol in PIECE_ORDER}
+def build_piece_images(master, size: int = 72, piece_set: str | None = None) -> dict[str, ImageTk.PhotoImage]:
+    selected_set = piece_set or os.getenv("BOSS_CHESS_PIECE_SET", "Classic")
+    return {symbol: ImageTk.PhotoImage(_render_piece(symbol, size, selected_set), master=master) for symbol in PIECE_ORDER}
