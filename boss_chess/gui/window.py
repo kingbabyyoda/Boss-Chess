@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
 from boss_chess.gui.piece_art import build_piece_images
+from boss_chess.gui.promotion_dialog import PromotionDialog
 from boss_chess.gui.session import AiMoveOutcome, GuiSession
 from boss_chess.gui.settings_dialog import SettingsDialog
 from boss_chess.types import GameVariant
@@ -525,7 +526,7 @@ class BossChessApp:
         move = self._build_move(self.selected_square, square)
         self.selected_square = None
         if move is None:
-            self._append_message("That move is not legal.")
+            self._append_message("That move is not legal or promotion was cancelled.")
             self.refresh_all()
             return
         board_before = self.session.state.board.copy(stack=False)
@@ -544,11 +545,17 @@ class BossChessApp:
         source_piece = board.piece_at(from_square)
         if source_piece is None:
             return None
+
         promotions: tuple[int | None, ...] = (None,)
         if source_piece.piece_type == chess.PAWN:
             last_rank = 7 if source_piece.color == chess.WHITE else 0
             if chess.square_rank(to_square) == last_rank:
-                promotions = (chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT)
+                dialog = PromotionDialog(self.root, source_piece.color)
+                self.root.wait_window(dialog.window)
+                if dialog.result is None:
+                    return None
+                promotions = (dialog.result,)
+
         for promotion in promotions:
             move = chess.Move(from_square, to_square, promotion=promotion)
             if move in board.legal_moves:
