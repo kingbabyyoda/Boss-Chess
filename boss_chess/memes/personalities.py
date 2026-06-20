@@ -13,6 +13,10 @@ PERSONALITIES: list[str] = [
     "Blunder Bard",
     "Sacrifice Fanatic",
     "Dramatic Arbiter",
+    "Endgame Oracle",
+    "Tactical Gremlin",
+    "Zugzwang Shaman",
+    "Eval Goblin",
 ]
 
 PERSONALITY_INTROS: dict[str, list[str]] = {
@@ -28,6 +32,10 @@ PERSONALITY_INTROS: dict[str, list[str]] = {
     "Blunder Bard": ["every move is art", "a tragedy in one act", "the blunder sings"],
     "Sacrifice Fanatic": ["material is temporary", "the attack must flow", "all pieces are volunteers"],
     "Dramatic Arbiter": ["illegal? perhaps. iconic? yes.", "the board has feelings", "checkmate is a suggestion"],
+    "Endgame Oracle": ["the king walks alone", "fate is a passed pawn", "only the kings remain"],
+    "Tactical Gremlin": ["the fork is imminent", "there is a pin in the fog", "you have been spotted"],
+    "Zugzwang Shaman": ["every move is a curse", "the position demands tribute", "silence, the board speaks"],
+    "Eval Goblin": ["the number is wobbling", "green bar? blue bar? chaos bar", "the engine is nervous"],
 }
 
 VOICE_TAGS: list[str] = sorted(PERSONALITY_INTROS)
