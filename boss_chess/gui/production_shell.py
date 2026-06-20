@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import chess
+from pathlib import Path
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
 
 from boss_chess.gui.window import BossChessApp
 
@@ -14,6 +14,7 @@ class ProductionBossChessApp(BossChessApp):
         self._install_quick_actions()
         self._install_status_strip()
         self.root.protocol("WM_DELETE_WINDOW", self._confirm_exit)
+        self.root.after(350, self._show_startup_tour)
         self._append_message("Production shell loaded.")
         self.refresh_all()
 
@@ -123,6 +124,18 @@ class ProductionBossChessApp(BossChessApp):
         self.root.bind_all("<Control-f>", lambda _event: self._flip_board())
         self.root.bind_all("<Control-e>", lambda _event: self._show_eval())
 
+    def _show_startup_tour(self) -> None:
+        messagebox.showinfo(
+            "Welcome to Boss Chess",
+            "Quick tour:\n\n"
+            "• Use the board to move pieces.\n"
+            "• Use New Game, Save, Load, Eval, and Export PGN from the quick bar.\n"
+            "• Open Settings for engine strength, variants, trainer, meme, and cheat modes.\n"
+            "• Promotion now opens a chooser dialog.\n\n"
+            "Tip: the menus mirror the quick-action bar and support keyboard shortcuts.",
+            parent=self.root,
+        )
+
     def _new_game_flow(self) -> None:
         if not messagebox.askyesno("New Game", "Start a fresh game and discard the current board?"):
             return
@@ -158,3 +171,61 @@ class ProductionBossChessApp(BossChessApp):
     def _confirm_exit(self) -> None:
         if messagebox.askyesno("Exit Boss Chess", "Close Boss Chess?"):
             self.root.destroy()
+
+    def _save_game(self) -> None:
+        filename = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Save Boss Chess Game",
+            defaultextension=".json",
+            filetypes=[("Boss Chess save files", "*.json"), ("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile=self.save_entry.get().strip() or "autosave.json",
+        )
+        if not filename:
+            return
+        path = Path(filename)
+        try:
+            saved_path = self.session.save(path.stem)
+            self.save_entry.delete(0, "end")
+            self.save_entry.insert(0, saved_path.stem)
+            self._append_message(f"Saved to {saved_path.as_posix()}")
+        except Exception as exc:
+            self._append_message(f"Save failed: {exc}")
+
+    def _load_game(self) -> None:
+        filename = filedialog.askopenfilename(
+            parent=self.root,
+            title="Load Boss Chess Game",
+            filetypes=[("Boss Chess save files", "*.json"), ("JSON files", "*.json"), ("All files", "*.*")],
+            initialdir=str(Path("saves")),
+        )
+        if not filename:
+            return
+        try:
+            path = Path(filename)
+            loaded_path = self.session.load(path.stem)
+            self.selected_square = None
+            self.save_entry.delete(0, "end")
+            self.save_entry.insert(0, loaded_path.stem)
+            self._append_message(f"Loaded {loaded_path.as_posix()}")
+            self._sync_mode_checkboxes()
+            self._apply_theme()
+            self.refresh_all()
+            self.root.after(120, self._maybe_ai_turn)
+        except Exception as exc:
+            self._append_message(f"Load failed: {exc}")
+
+    def _export_pgn(self) -> None:
+        filename = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export PGN",
+            defaultextension=".pgn",
+            filetypes=[("PGN files", "*.pgn"), ("All files", "*.*")],
+            initialfile="boss_chess.pgn",
+        )
+        if not filename:
+            return
+        try:
+            path = self.session.export_pgn(Path(filename).stem)
+            self._append_message(f"Exported PGN to {path.as_posix()}")
+        except Exception as exc:
+            self._append_message(f"PGN export failed: {exc}")
