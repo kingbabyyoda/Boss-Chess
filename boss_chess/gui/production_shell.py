@@ -4,16 +4,52 @@ import tkinter as tk
 from tkinter import messagebox
 
 from boss_chess.gui.window import BossChessApp
-from boss_chess.types import GameConfig
 
 
 class ProductionBossChessApp(BossChessApp):
     def __init__(self, session):
         super().__init__(session)
         self._install_menu_bar()
+        self._install_status_strip()
         self.root.protocol("WM_DELETE_WINDOW", self._confirm_exit)
         self._append_message("Production shell loaded.")
         self.refresh_all()
+
+    def _install_status_strip(self) -> None:
+        palette = self.theme.palette
+        self.root.grid_rowconfigure(1, weight=0)
+        self.status_bar = tk.Frame(self.root, bg=palette["surface"], highlightthickness=1, highlightbackground=palette["panel_border"])
+        self.status_bar.grid(row=1, column=0, sticky="ew")
+        self.status_bar.columnconfigure(0, weight=1)
+        self.status_bar.columnconfigure(1, weight=0)
+        self.status_bar.columnconfigure(2, weight=0)
+        self.status_left = tk.StringVar(value="Ready")
+        self.status_center = tk.StringVar(value="Variant: standard")
+        self.status_right = tk.StringVar(value="Modes: normal")
+        tk.Label(self.status_bar, textvariable=self.status_left, bg=palette["surface"], fg=palette["text"], anchor="w", padx=12, pady=6).grid(row=0, column=0, sticky="ew")
+        tk.Label(self.status_bar, textvariable=self.status_center, bg=palette["surface"], fg=palette["muted"], anchor="e", padx=12, pady=6).grid(row=0, column=1, sticky="e")
+        tk.Label(self.status_bar, textvariable=self.status_right, bg=palette["surface"], fg=palette["muted"], anchor="e", padx=12, pady=6).grid(row=0, column=2, sticky="e")
+        self._refresh_status_strip()
+
+    def _refresh_status_strip(self) -> None:
+        board = self.session.state.board
+        turn = "White" if board.turn == 1 else "Black"
+        last = self.session.state.move_history[-1].uci() if self.session.state.move_history else "none"
+        self.status_left.set(f"Turn: {turn}   Last move: {last}")
+        self.status_center.set(f"Variant: {self.session.state.variant}")
+        modes = []
+        if self.session.config.trainer:
+            modes.append("Trainer")
+        if self.session.config.meme:
+            modes.append("Meme")
+        if self.session.config.cheat:
+            modes.append("Cheat")
+        self.status_right.set("Modes: " + (", ".join(modes) if modes else "Normal"))
+
+    def refresh_all(self) -> None:
+        super().refresh_all()
+        if hasattr(self, "status_left"):
+            self._refresh_status_strip()
 
     def _install_menu_bar(self) -> None:
         menubar = tk.Menu(self.root)
