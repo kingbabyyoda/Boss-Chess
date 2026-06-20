@@ -1,22 +1,35 @@
 from __future__ import annotations
 
 from pathlib import Path
+import chess
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from boss_chess.gui.window import BossChessApp
+from boss_chess.preferences import AppPreferences, save_preferences
 
 
 class ProductionBossChessApp(BossChessApp):
-    def __init__(self, session):
+    def __init__(self, session, preferences: AppPreferences):
+        self.preferences = preferences
         super().__init__(session)
         self._install_menu_bar()
         self._install_quick_actions()
         self._install_status_strip()
         self.root.protocol("WM_DELETE_WINDOW", self._confirm_exit)
-        self.root.after(350, self._show_startup_tour)
+        self.root.report_callback_exception = self._report_callback_exception
+        if not self.preferences.startup_tour_seen:
+            self.root.after(350, self._show_startup_tour)
         self._append_message("Production shell loaded.")
         self.refresh_all()
+
+    def _report_callback_exception(self, exc_type, exc_value, exc_tb) -> None:
+        from boss_chess.runtime import configure_logging, install_exception_hooks
+
+        logger = configure_logging()
+        install_exception_hooks(logger)
+        logger.exception("Unhandled GUI exception", exc_info=(exc_type, exc_value, exc_tb))
+        messagebox.showerror("Boss Chess Error", f"An unexpected error occurred:\n\n{exc_value}", parent=self.root)
 
     def _install_quick_actions(self) -> None:
         palette = self.theme.palette
@@ -135,6 +148,8 @@ class ProductionBossChessApp(BossChessApp):
             "Tip: the menus mirror the quick-action bar and support keyboard shortcuts.",
             parent=self.root,
         )
+        self.preferences.startup_tour_seen = True
+        save_preferences(self.preferences)
 
     def _new_game_flow(self) -> None:
         if not messagebox.askyesno("New Game", "Start a fresh game and discard the current board?"):
@@ -164,11 +179,12 @@ class ProductionBossChessApp(BossChessApp):
     def _show_about(self) -> None:
         messagebox.showinfo(
             "About Boss Chess",
-            "Boss Chess\n\nA Python chess app with trainer mode, meme mode, cheat mode, variants, and a polished desktop GUI.\n\nMilestone 12: production shell.",
+            "Boss Chess\n\nA Python chess app with trainer mode, meme mode, cheat mode, variants, accessibility options, and a polished desktop GUI.\n\nMilestone 15: production quality.",
             parent=self.root,
         )
 
     def _confirm_exit(self) -> None:
+        save_preferences(self.preferences)
         if messagebox.askyesno("Exit Boss Chess", "Close Boss Chess?"):
             self.root.destroy()
 
@@ -229,3 +245,77 @@ class ProductionBossChessApp(BossChessApp):
             self._append_message(f"Exported PGN to {path.as_posix()}")
         except Exception as exc:
             self._append_message(f"PGN export failed: {exc}")
+
+    def _new_game(self) -> None:
+        super()._new_game()
+        save_preferences(self.preferences)
+
+    def _undo(self) -> None:
+        super()._undo()
+        save_preferences(self.preferences)
+
+    def _open_settings(self) -> None:
+        from boss_chess.gui.settings_dialog import SettingsDialog
+
+        dialog = SettingsDialog(self.root, self.session.config, self.theme.name)
+        self.root.wait_window(dialog.window)
+        if dialog.result and dialog.result.saved:
+            variant_changed = (
+                self.session.config.variant.name.value != dialog.result.variant
+                or self.session.config.variant.chess960_seed != dialog.result.chess960_seed
+            )
+            self.session.config.engine.depth = dialog.result.depth
+            self.session.config.engine.use_stockfish = dialog.result.use_stockfish
+            self.session.config.engine.use_opening_book = dialog.result.use_opening_book
+            self.session.config.engine.target_elo = dialog.result.target_elo
+            self.session.config.engine.multi_pv = dialog.result.multi_pv
+            self.session.config.trainer = dialog.result.trainer
+            self.session.config.meme = dialog.result.meme
+            self.session.config.cheat = dialog.result.cheat
+            self.session.config.variant.name = GameVariant(dialog.result.variant)
+            self.session.config.variant.chess960_seed = dialog.result.chess960_seed
+            self.session.config.ui_scale = dialog.result.ui_scale
+            self.session.config.reduce_motion = dialog.result.reduce_motion
+            self.session.config.high_contrast = dialog.result.high_contrast
+            self.session.config.piece_set = dialog.result.piece_set
+            self.theme.name = dialog.result.theme
+            if self.session.config.high_contrast and self.theme.name != "High Contrast":
+                self.theme.name = "High Contrast"
+            if not self.session.config.high_contrast and self.theme.name == "High Contrast":
+                self.theme.name = "Classic"
+            self.theme_var.set(self.theme.name)
+            self.save_entry.delete(0, "end")
+            self.save_entry.insert(0, self.save_entry.get().strip() or "autosave")
+            self.session.engine = self.session._build_engine()
+            self.session.trainer = self.session.trainer.__class__(self.session.engine)
+            if variant_changed:
+                self.session.reset()
+                self._append_message("Variant changed; started a new game.")
+            self._apply_theme()
+            self.refresh_all()
+            self.preferences.config = self.session.config
+            self.preferences.theme = self.theme.name
+            save_preferences(self.preferences)
+            self._append_message("Settings updated.")
+
+    def _sync_modes(self) -> None:
+        super()._sync_modes()
+        self.preferences.config = self.session.config
+        save_preferences(self.preferences)
+
+    def _set_theme(self, name: str) -> None:
+        if name == "High Contrast":
+            self.session.config.high_contrast = True
+        else:
+            self.session.config.high_contrast = False
+        super()._set_theme(name)
+        self.preferences.theme = self.theme.name
+        self.preferences.config = self.session.config
+        save_preferences(self.preferences)
+
+    def _animate_and_finish(self, move, piece_image, on_complete):
+        if self.session.config.reduce_motion:
+            self.animating = False
+            on_complete()
+            return
+        super()._animate_and_finish(move, piece_image, on_complete)
