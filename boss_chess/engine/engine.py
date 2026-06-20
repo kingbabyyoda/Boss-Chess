@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 
 import chess
@@ -23,7 +24,7 @@ class ChessEngine:
     stockfish: StockfishAdapter | None = field(init=False)
 
     def __post_init__(self) -> None:
-        self.searcher = Searcher(depth=self.depth)
+        self.searcher = Searcher(depth=self.depth, tablebase_path=os.getenv("BOSS_CHESS_SYZYGY_PATH"))
         self.book = OpeningBook(enabled=self.use_opening_book)
         self.stockfish = None
         if self.use_stockfish:
