@@ -13,14 +13,14 @@ def _position_key(board: chess.Board) -> str:
 
 
 OPENING_BOOK: dict[str, list[str]] = {
-    _position_key(chess.Board()): ["e2e4", "d2d4", "c2c4", "g1f3", "b1c3"],
-    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -": ["e7e5", "c7c5", "e7e6", "c7c6", "g8f6"],
-    "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq -": ["d7d5", "g8f6", "e7e6", "c7c5"],
-    "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq -": ["e7e5", "g8f6", "c7c5", "e7e6"],
-    "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -": ["g1f3", "d2d4", "f1b5", "b1c3"],
-    "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -": ["g1f3", "f1c4", "d2d4", "b1c3"],
-    "rnbqkbnr/pppp1ppp/8/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -": ["b8c6", "g8f6", "d7d6", "f8e7"],
-    "rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -": ["b1c3", "d2d4", "f1c4", "g1f3"],
+    _position_key(chess.Board()): ["e2e4", "d2d4", "c2c4", "g1f3", "b1c3", "e2e3"],
+    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -": ["e7e5", "c7c5", "e7e6", "c7c6", "g8f6", "d7d5"],
+    "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq -": ["d7d5", "g8f6", "e7e6", "c7c5", "g7g6"],
+    "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq -": ["e7e5", "g8f6", "c7c5", "e7e6", "d7d5"],
+    "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -": ["g1f3", "d2d4", "f1b5", "b1c3", "f1c4"],
+    "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -": ["g1f3", "f1c4", "d2d4", "b1c3", "f1b5"],
+    "rnbqkbnr/pppp1ppp/8/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -": ["b8c6", "g8f6", "d7d6", "f8e7", "c7c6"],
+    "rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -": ["b1c3", "d2d4", "f1c4", "g1f3", "f2f4"],
 }
 
 
@@ -47,7 +47,9 @@ class OpeningBook:
         legal_candidates = [move for move in candidates if move in legal]
         if not legal_candidates:
             return None
-        return chess.Move.from_uci(random.choice(legal_candidates))
+
+        weights = list(range(len(legal_candidates), 0, -1))
+        return chess.Move.from_uci(random.choices(legal_candidates, weights=weights, k=1)[0])
 
     def in_book(self, board: chess.Board) -> bool:
         return self.choose_move(board) is not None
