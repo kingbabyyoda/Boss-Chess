@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import chess
 import tkinter as tk
 from tkinter import messagebox
 
@@ -58,7 +59,7 @@ class ProductionBossChessApp(BossChessApp):
 
     def _refresh_status_strip(self) -> None:
         board = self.session.state.board
-        turn = "White" if board.turn == tk.TRUE else "Black"
+        turn = "White" if board.turn == chess.WHITE else "Black"
         last = self.session.state.move_history[-1].uci() if self.session.state.move_history else "none"
         self.status_left.set(f"Turn: {turn}   Last move: {last}")
         self.status_center.set(f"Variant: {self.session.state.variant}")
