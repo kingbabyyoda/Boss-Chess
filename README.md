@@ -1,5 +1,7 @@
 # Boss Chess
 
+**Version 1.0.0**
+
 A local Python chess project with four stacked modes and a polished graphical interface:
 
 - **Normal mode** — plays a solid game of chess.
@@ -247,9 +249,4 @@ The release workflow builds packaged executables on Windows, macOS, and Linux wh
 
 ## Roadmap
 
-- Add richer online play features
-- Add endgame tablebases
-- Add tournament ladders
-- Add richer cheat events
-- Add persistent profile sync
-- Add a polished achievements system
+Boss Chess 1.0 is released. Future work can focus on post-launch polish, community feedback, and platform-specific packaging improvements.
