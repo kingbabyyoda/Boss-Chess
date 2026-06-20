@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
+import traceback
 
 import chess
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
+from boss_chess.app_paths import crashes_dir, ensure_app_dirs
 from boss_chess.gui.piece_art import build_piece_images
 from boss_chess.gui.window import BossChessApp
 from boss_chess.preferences import AppPreferences, save_preferences
@@ -27,10 +30,10 @@ class ProductionBossChessApp(BossChessApp):
         self.refresh_all()
 
     def _report_callback_exception(self, exc_type, exc_value, exc_tb) -> None:
-        from boss_chess.runtime import configure_logging
-
-        logger = configure_logging()
-        logger.exception("Unhandled GUI exception", exc_info=(exc_type, exc_value, exc_tb))
+        ensure_app_dirs()
+        logger_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        crash_path = crashes_dir() / f"crash-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}.txt"
+        crash_path.write_text(logger_text, encoding="utf-8")
         messagebox.showerror("Boss Chess Error", f"An unexpected error occurred:\n\n{exc_value}", parent=self.root)
 
     def _install_quick_actions(self) -> None:
