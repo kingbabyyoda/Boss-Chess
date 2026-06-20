@@ -229,6 +229,7 @@ class ProductionBossChessApp(BossChessApp):
             self.save_entry.insert(0, loaded_path.stem)
             self._append_message(f"Loaded {loaded_path.as_posix()}")
             self._sync_mode_checkboxes()
+            self._piece_images = build_piece_images(self.root, size=74, piece_set=self.session.config.piece_set)
             self._apply_theme()
             self.refresh_all()
             self.root.after(120, self._maybe_ai_turn)
@@ -304,7 +305,7 @@ class ProductionBossChessApp(BossChessApp):
         save_preferences(self.preferences)
 
     def _set_theme(self, name: str) -> None:
-        self.session.config.high_contrast = name == "Neon" and self.session.config.high_contrast
+        self.session.config.high_contrast = name == "Neon"
         super()._set_theme(name)
         self.preferences.theme = self.theme.name
         self.preferences.config = self.session.config
