@@ -24,10 +24,29 @@ class ProductionBossChessApp(BossChessApp):
         self._install_status_strip()
         self.root.protocol("WM_DELETE_WINDOW", self._confirm_exit)
         self.root.report_callback_exception = self._report_callback_exception
+        self.root.bind("<Configure>", self._capture_geometry)
+        self._restore_geometry()
         if not self.preferences.startup_tour_seen:
             self.root.after(350, self._show_startup_tour)
         self._append_message("Production shell loaded.")
         self.refresh_all()
+
+    def _capture_geometry(self, _event=None) -> None:
+        try:
+            geometry = self.root.geometry()
+        except Exception:
+            return
+        if geometry and geometry != self.preferences.window_geometry:
+            self.preferences.window_geometry = geometry
+            save_preferences(self.preferences)
+
+    def _restore_geometry(self) -> None:
+        geometry = self.preferences.window_geometry
+        if geometry:
+            try:
+                self.root.geometry(geometry)
+            except Exception:
+                pass
 
     def _report_callback_exception(self, exc_type, exc_value, exc_tb) -> None:
         ensure_app_dirs()
@@ -189,6 +208,7 @@ class ProductionBossChessApp(BossChessApp):
         )
 
     def _confirm_exit(self) -> None:
+        self._capture_geometry()
         save_preferences(self.preferences)
         if messagebox.askyesno("Exit Boss Chess", "Close Boss Chess?"):
             self.root.destroy()
