@@ -75,7 +75,7 @@ class SettingsDialog:
         self._label_entry(frame, "Chess960 seed", self.chess960_seed_var, row); row += 1
 
         ttk.Label(frame, text="Theme").grid(row=row, column=0, sticky="w", pady=4)
-        ttk.Combobox(frame, textvariable=self.theme_var, values=["Classic", "Midnight", "Neon", "High Contrast"], state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=4)
+        ttk.Combobox(frame, textvariable=self.theme_var, values=["Classic", "Midnight", "Neon"], state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=4)
         row += 1
 
         ttk.Label(frame, text="Piece set").grid(row=row, column=0, sticky="w", pady=4)
