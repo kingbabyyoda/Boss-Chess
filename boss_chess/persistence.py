@@ -41,7 +41,7 @@ def save_game(path: Path, state: GameState, config: GameConfig, ai_color: chess.
         start_fen=state.starting_fen,
         current_fen=state.board.fen(),
         moves=[move.uci() for move in state.move_history],
-        config=_config_to_dict(config),
+        config=config_to_dict(config),
         ai_color="white" if ai_color == chess.WHITE else "black",
         cheat=cheat.to_dict(),
     )
@@ -51,7 +51,7 @@ def save_game(path: Path, state: GameState, config: GameConfig, ai_color: chess.
 def load_game(path: Path) -> LoadedGame:
     data = json.loads(path.read_text(encoding="utf-8"))
 
-    config = _config_from_dict(data.get("config", {}))
+    config = config_from_dict(data.get("config", {}))
     start_fen = str(data.get("start_fen", chess.STARTING_FEN))
     state = GameState(
         starting_fen=start_fen,
@@ -77,12 +77,24 @@ def load_game(path: Path) -> LoadedGame:
     return LoadedGame(state=state, config=config, ai_color=ai_color, cheat=cheat)
 
 
+def config_to_dict(config: GameConfig) -> dict[str, Any]:
+    return _config_to_dict(config)
+
+
+def config_from_dict(data: dict[str, Any]) -> GameConfig:
+    return _config_from_dict(data)
+
+
 def _config_to_dict(config: GameConfig) -> dict[str, Any]:
     return {
         "ai_plays_white": config.ai_plays_white,
         "trainer": config.trainer,
         "meme": config.meme,
         "cheat": config.cheat,
+        "ui_scale": config.ui_scale,
+        "reduce_motion": config.reduce_motion,
+        "high_contrast": config.high_contrast,
+        "piece_set": config.piece_set,
         "engine": {
             "depth": config.engine.depth,
             "use_stockfish": config.engine.use_stockfish,
@@ -131,6 +143,10 @@ def _config_from_dict(data: dict[str, Any]) -> GameConfig:
         trainer=bool(data.get("trainer", False)),
         meme=bool(data.get("meme", False)),
         cheat=bool(data.get("cheat", False)),
+        ui_scale=float(data.get("ui_scale", 1.0)),
+        reduce_motion=bool(data.get("reduce_motion", False)),
+        high_contrast=bool(data.get("high_contrast", False)),
+        piece_set=str(data.get("piece_set", "Classic")),
         engine=engine,
         variant=variant,
         multiplayer=multiplayer,
