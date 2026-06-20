@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import argparse
 
+from boss_chess.preferences import load_preferences, save_preferences
+from boss_chess.runtime import configure_logging, install_exception_hooks
+
 
 def _choose_interface() -> str:
     while True:
@@ -14,6 +17,9 @@ def _choose_interface() -> str:
 
 
 def main() -> int:
+    logger = configure_logging()
+    install_exception_hooks(logger)
+
     try:
         from boss_chess.ui.menu import configure_game
         from boss_chess.game import run_game
@@ -28,9 +34,12 @@ def main() -> int:
     parser.add_argument("--terminal", action="store_true", help="Start the terminal interface")
     args = parser.parse_args()
 
+    preferences = load_preferences()
     print("Boss Chess")
     print("A modular chess project with variants, multiplayer, trainer, meme, cheat, and GUI modes.")
-    config = configure_game()
+    config = configure_game(preferences.config)
+    preferences.config = config
+    save_preferences(preferences)
 
     interface = "terminal"
     if args.gui and not args.terminal:
@@ -53,7 +62,7 @@ def main() -> int:
             print("Falling back to terminal mode.")
             run_game(config)
             return 0
-        run_gui(config)
+        run_gui(config, preferences)
     else:
         run_game(config)
     return 0
