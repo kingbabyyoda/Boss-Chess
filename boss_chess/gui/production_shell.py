@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import chess
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -24,10 +25,9 @@ class ProductionBossChessApp(BossChessApp):
         self.refresh_all()
 
     def _report_callback_exception(self, exc_type, exc_value, exc_tb) -> None:
-        from boss_chess.runtime import configure_logging, install_exception_hooks
+        from boss_chess.runtime import configure_logging
 
         logger = configure_logging()
-        install_exception_hooks(logger)
         logger.exception("Unhandled GUI exception", exc_info=(exc_type, exc_value, exc_tb))
         messagebox.showerror("Boss Chess Error", f"An unexpected error occurred:\n\n{exc_value}", parent=self.root)
 
@@ -278,14 +278,8 @@ class ProductionBossChessApp(BossChessApp):
             self.session.config.reduce_motion = dialog.result.reduce_motion
             self.session.config.high_contrast = dialog.result.high_contrast
             self.session.config.piece_set = dialog.result.piece_set
-            self.theme.name = dialog.result.theme
-            if self.session.config.high_contrast and self.theme.name != "High Contrast":
-                self.theme.name = "High Contrast"
-            if not self.session.config.high_contrast and self.theme.name == "High Contrast":
-                self.theme.name = "Classic"
+            self.theme.name = "Neon" if self.session.config.high_contrast else dialog.result.theme
             self.theme_var.set(self.theme.name)
-            self.save_entry.delete(0, "end")
-            self.save_entry.insert(0, self.save_entry.get().strip() or "autosave")
             self.session.engine = self.session._build_engine()
             self.session.trainer = self.session.trainer.__class__(self.session.engine)
             if variant_changed:
@@ -304,10 +298,7 @@ class ProductionBossChessApp(BossChessApp):
         save_preferences(self.preferences)
 
     def _set_theme(self, name: str) -> None:
-        if name == "High Contrast":
-            self.session.config.high_contrast = True
-        else:
-            self.session.config.high_contrast = False
+        self.session.config.high_contrast = name == "Neon" and self.session.config.high_contrast
         super()._set_theme(name)
         self.preferences.theme = self.theme.name
         self.preferences.config = self.session.config
