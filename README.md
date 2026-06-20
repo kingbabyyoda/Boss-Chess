@@ -17,16 +17,16 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Installable CLI entrypoint: `boss-chess`
 - Module entrypoint: `python -m boss_chess`
 - Legal move validation with `python-chess`
-- Alpha-beta search with quiescence and transposition-table caching
+- Alpha-beta search with quiescence, iterative deepening, aspiration windows, killer moves, history heuristics, and optional Syzygy endgame probing
 - Optional Stockfish integration
 - Built-in opening book for early-game play
-- Heuristic evaluation with piece-square tables, king safety, mobility, and passed pawns
+- Heuristic evaluation with piece-square tables, king safety, mobility, passed pawns, and piece activity
 - Trainer feedback loop
 - Opening recognition and tactical motif detection
 - Full game reports with accuracy and centipawn-loss summaries
 - Lesson and practice prompts with puzzle generation
 - Meme provider with live Reddit fetching and disk-backed cache
-- Meme personalities and context lines for the terminal and GUI
+- More meme personalities and richer AnarchyChess-style context lines
 - Boss-style cheat events
 - Boss health, phase changes, boss meter, and boss HUD lines
 - Save-friendly architecture
@@ -103,6 +103,8 @@ At launch, you can choose:
 - analysis line count
 
 If Stockfish is not available, Boss Chess falls back to the built-in engine automatically.
+
+If you have Syzygy tablebases, set `BOSS_CHESS_SYZYGY_PATH` to the tablebase folder and the searcher will probe exact endgames automatically.
 
 ## Project layout
 
