@@ -7,22 +7,22 @@ from PIL import Image, ImageDraw, ImageTk
 
 PIECE_ORDER = "PNBRQKpnbrqk"
 
-PIECE_STYLES: dict[str, tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]] = {
-    "Classic": ((248, 250, 252, 255), (15, 23, 42, 255), (15, 23, 42, 255)),
-    "Slate": ((226, 232, 240, 255), (30, 41, 59, 255), (15, 23, 42, 255)),
-    "Neon": ((34, 211, 238, 255), (124, 58, 237, 255), (248, 250, 252, 255)),
+# (white fill, white outline, black fill, black outline, accent)
+PIECE_STYLES: dict[str, tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]] = {
+    "Classic": ((248, 250, 252, 255), (15, 23, 42, 255), (15, 23, 42, 255), (248, 250, 252, 255), (99, 102, 241, 255)),
+    "Slate": ((226, 232, 240, 255), (30, 41, 59, 255), (15, 23, 42, 255), (226, 232, 240, 255), (59, 130, 246, 255)),
+    "Neon": ((34, 211, 238, 255), (124, 58, 237, 255), (15, 23, 42, 255), (34, 211, 238, 255), (248, 250, 252, 255)),
 }
 
 SHADOW = (0, 0, 0, 70)
 
 
-def _style_palette(piece_set: str) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
+def _style_palette(piece_set: str) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
     return PIECE_STYLES.get(piece_set, PIECE_STYLES["Classic"])
 
 
 def _palette(symbol: str, piece_set: str) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
-    white_fill, white_outline, accent = _style_palette(piece_set)
-    black_fill, black_outline, _ = _style_palette(piece_set)
+    white_fill, white_outline, black_fill, black_outline, accent = _style_palette(piece_set)
     return (white_fill, white_outline, accent) if symbol.isupper() else (black_fill, black_outline, accent)
 
 
