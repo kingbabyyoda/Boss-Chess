@@ -14,6 +14,8 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 
 - Clean multi-file structure
 - Package-based code in `boss_chess/`
+- Installable CLI entrypoint: `boss-chess`
+- Module entrypoint: `python -m boss_chess`
 - Legal move validation with `python-chess`
 - Alpha-beta search with quiescence and transposition-table caching
 - Optional Stockfish integration
@@ -41,6 +43,7 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 - Chess variants: Standard, Chess960, King of the Hill, Three-check, Atomic, Racing Kings
 - Terminal host/join multiplayer relay
 - Tests and GitHub Actions workflow
+- Release build workflow with packaged artifacts
 
 ## Requirements
 
@@ -52,6 +55,12 @@ This repo is set up as a clean, GitHub-style Python project with a package layou
 
 ```bash
 pip install -r requirements.txt
+```
+
+To install the package itself in editable mode:
+
+```bash
+pip install -e .
 ```
 
 ## Run
@@ -66,6 +75,19 @@ GUI mode:
 
 ```bash
 python main.py --gui
+```
+
+Installed CLI:
+
+```bash
+boss-chess --gui
+boss-chess --terminal
+```
+
+Module entrypoint:
+
+```bash
+python -m boss_chess --gui
 ```
 
 If you leave off the flag, Boss Chess asks which interface you want.
@@ -93,8 +115,11 @@ Boss-Chess-main/
 ├── LICENSE
 ├── .gitignore
 ├── .github/workflows/ci.yml
+├── .github/workflows/release.yml
 ├── boss_chess/
 │   ├── __init__.py
+│   ├── __main__.py
+│   ├── cli.py
 │   ├── config.py
 │   ├── game.py
 │   ├── state.py
@@ -170,7 +195,7 @@ The GUI mode includes:
 - animated moves
 - board flipping
 - captured pieces display
-- evaluation meter
+- evaluation bar
 - evaluation history graph
 - save and load controls
 - theme switching
@@ -180,6 +205,9 @@ The GUI mode includes:
 - opening explorer
 - report, lesson, practice, and stats buttons
 - PGN export
+- promotion chooser dialog
+- production shell with menu bar and quick-action toolbar
+- startup tour and live status strip
 
 ## Controls
 
@@ -211,6 +239,10 @@ Other commands:
 - `modes`
 - `quit`
 
+## Release builds
+
+The release workflow builds packaged executables on Windows, macOS, and Linux when a `v*` tag is pushed. Tagged releases also run the test suite before packaging.
+
 ## Roadmap
 
 - Add richer online play features
@@ -219,7 +251,3 @@ Other commands:
 - Add richer cheat events
 - Add persistent profile sync
 - Add a polished achievements system
-
-## License
-
-MIT
