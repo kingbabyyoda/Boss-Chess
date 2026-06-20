@@ -1,100 +1,134 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 
-PIECE_GLYPHS = {
-    "P": "♙",
-    "N": "♘",
-    "B": "♗",
-    "R": "♖",
-    "Q": "♕",
-    "K": "♔",
-    "p": "♟",
-    "n": "♞",
-    "b": "♝",
-    "r": "♜",
-    "q": "♛",
-    "k": "♚",
+PIECE_ORDER = "PNBRQKpnbrqk"
+
+WHITE_FILL = (248, 250, 252, 255)
+WHITE_OUTLINE = (15, 23, 42, 255)
+BLACK_FILL = (15, 23, 42, 255)
+BLACK_OUTLINE = (248, 250, 252, 255)
+SHADOW = (0, 0, 0, 70)
+
+
+def _palette(symbol: str) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int]]:
+    return (WHITE_FILL, WHITE_OUTLINE) if symbol.isupper() else (BLACK_FILL, BLACK_OUTLINE)
+
+
+def _stroke(size: int) -> int:
+    return max(1, size // 18)
+
+
+def _canvas(size: int) -> Image.Image:
+    return Image.new("RGBA", (size, size), (0, 0, 0, 0))
+
+
+def _draw_shadow(draw: ImageDraw.ImageDraw, size: int, fn) -> None:
+    fn(draw, SHADOW, SHADOW, size)
+
+
+def _draw_pawn(draw: ImageDraw.ImageDraw, fill, outline, size: int) -> None:
+    s = _stroke(size)
+    w = size
+    draw.ellipse((w * 0.37, w * 0.10, w * 0.63, w * 0.36), fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.32, w * 0.28, w * 0.68, w * 0.66), radius=w * 0.12, fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.22, w * 0.72, w * 0.78, w * 0.86), radius=w * 0.05, fill=fill, outline=outline, width=s)
+
+
+def _draw_rook(draw: ImageDraw.ImageDraw, fill, outline, size: int) -> None:
+    s = _stroke(size)
+    w = size
+    draw.rectangle((w * 0.31, w * 0.20, w * 0.69, w * 0.68), fill=fill, outline=outline, width=s)
+    for x0 in (w * 0.28, w * 0.42, w * 0.56):
+        draw.rectangle((x0, w * 0.10, x0 + w * 0.10, w * 0.22), fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.22, w * 0.72, w * 0.78, w * 0.86), radius=w * 0.05, fill=fill, outline=outline, width=s)
+
+
+def _draw_bishop(draw: ImageDraw.ImageDraw, fill, outline, size: int) -> None:
+    s = _stroke(size)
+    w = size
+    draw.ellipse((w * 0.30, w * 0.12, w * 0.70, w * 0.56), fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.33, w * 0.46, w * 0.67, w * 0.76), radius=w * 0.09, fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.23, w * 0.78, w * 0.77, w * 0.86), radius=w * 0.05, fill=fill, outline=outline, width=s)
+    draw.line((w * 0.50, w * 0.20, w * 0.42, w * 0.41), fill=outline, width=s + 1)
+    draw.line((w * 0.42, w * 0.41, w * 0.58, w * 0.47), fill=outline, width=s + 1)
+
+
+def _draw_knight(draw: ImageDraw.ImageDraw, fill, outline, size: int) -> None:
+    s = _stroke(size)
+    w = size
+    pts = [
+        (w * 0.32, w * 0.80),
+        (w * 0.37, w * 0.58),
+        (w * 0.44, w * 0.44),
+        (w * 0.39, w * 0.24),
+        (w * 0.52, w * 0.12),
+        (w * 0.69, w * 0.20),
+        (w * 0.72, w * 0.43),
+        (w * 0.60, w * 0.54),
+        (w * 0.68, w * 0.67),
+        (w * 0.67, w * 0.80),
+    ]
+    draw.polygon(pts, fill=fill, outline=outline)
+    draw.rounded_rectangle((w * 0.24, w * 0.80, w * 0.76, w * 0.86), radius=w * 0.05, fill=fill, outline=outline, width=s)
+    draw.ellipse((w * 0.55, w * 0.28, w * 0.60, w * 0.33), fill=outline)
+
+
+def _draw_queen(draw: ImageDraw.ImageDraw, fill, outline, size: int) -> None:
+    s = _stroke(size)
+    w = size
+    pts = [
+        (w * 0.24, w * 0.28),
+        (w * 0.32, w * 0.14),
+        (w * 0.42, w * 0.28),
+        (w * 0.50, w * 0.12),
+        (w * 0.58, w * 0.28),
+        (w * 0.68, w * 0.14),
+        (w * 0.76, w * 0.28),
+        (w * 0.69, w * 0.68),
+        (w * 0.31, w * 0.68),
+    ]
+    draw.polygon(pts, fill=fill, outline=outline)
+    draw.ellipse((w * 0.28, w * 0.16, w * 0.36, w * 0.24), fill=fill, outline=outline, width=s)
+    draw.ellipse((w * 0.46, w * 0.08, w * 0.54, w * 0.16), fill=fill, outline=outline, width=s)
+    draw.ellipse((w * 0.64, w * 0.16, w * 0.72, w * 0.24), fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.23, w * 0.78, w * 0.77, w * 0.86), radius=w * 0.05, fill=fill, outline=outline, width=s)
+
+
+def _draw_king(draw: ImageDraw.ImageDraw, fill, outline, size: int) -> None:
+    s = _stroke(size)
+    w = size
+    draw.rounded_rectangle((w * 0.33, w * 0.18, w * 0.67, w * 0.61), radius=w * 0.10, fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.28, w * 0.57, w * 0.72, w * 0.79), radius=w * 0.08, fill=fill, outline=outline, width=s)
+    draw.rounded_rectangle((w * 0.22, w * 0.80, w * 0.78, w * 0.86), radius=w * 0.05, fill=fill, outline=outline, width=s)
+    draw.rectangle((w * 0.47, w * 0.06, w * 0.53, w * 0.19), fill=fill, outline=outline, width=s)
+    draw.rectangle((w * 0.42, w * 0.10, w * 0.58, w * 0.15), fill=fill, outline=outline, width=s)
+
+
+_DRAWERS = {
+    "P": _draw_pawn,
+    "N": _draw_knight,
+    "B": _draw_bishop,
+    "R": _draw_rook,
+    "Q": _draw_queen,
+    "K": _draw_king,
 }
-
-FONT_CANDIDATES = [
-    r"C:\Windows\Fonts\seguiemj.ttf",
-    r"C:\Windows\Fonts\segoeui.ttf",
-    r"C:\Windows\Fonts\arial.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-    "/System/Library/Fonts/Supplemental/Arial.ttf",
-]
-
-WHITE_FILL = "#f8fafc"
-WHITE_OUTLINE = "#111827"
-BLACK_FILL = "#0f172a"
-BLACK_OUTLINE = "#f8fafc"
-
-
-@lru_cache(maxsize=1)
-def _font_path() -> str | None:
-    for candidate in FONT_CANDIDATES:
-        if Path(candidate).exists():
-            return candidate
-    return None
 
 
 @lru_cache(maxsize=32)
-def _load_font(size: int) -> ImageFont.ImageFont:
-    path = _font_path()
-    if path is None:
-        return ImageFont.load_default()
-    try:
-        return ImageFont.truetype(path, size=size)
-    except Exception:
-        return ImageFont.load_default()
-
-
 def _render_piece(symbol: str, size: int) -> Image.Image:
-    glyph = PIECE_GLYPHS[symbol]
-    is_white = symbol.isupper()
-    fill = WHITE_FILL if is_white else BLACK_FILL
-    outline = WHITE_OUTLINE if is_white else BLACK_OUTLINE
-
-    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(canvas)
-    font = _load_font(int(size * 0.78))
-
-    bbox = draw.textbbox((0, 0), glyph, font=font, stroke_width=max(1, size // 20))
-    glyph_width = bbox[2] - bbox[0]
-    glyph_height = bbox[3] - bbox[1]
-    x = (size - glyph_width) / 2 - bbox[0]
-    y = (size - glyph_height) / 2 - bbox[1] - size * 0.03
-
-    shadow_pos = (x + size * 0.03, y + size * 0.03)
-    draw.text(
-        shadow_pos,
-        glyph,
-        font=font,
-        fill=(0, 0, 0, 72),
-        stroke_width=max(1, size // 20),
-        stroke_fill=(0, 0, 0, 48),
-    )
-    draw.text(
-        (x, y),
-        glyph,
-        font=font,
-        fill=fill,
-        stroke_width=max(1, size // 20),
-        stroke_fill=outline,
-    )
-    return canvas
+    fill, outline = _palette(symbol)
+    base = _canvas(size)
+    shadow = _canvas(size)
+    shadow_draw = ImageDraw.Draw(shadow)
+    base_draw = ImageDraw.Draw(base)
+    drawer = _DRAWERS[symbol.upper()]
+    drawer(shadow_draw, SHADOW, SHADOW, size)
+    drawer(base_draw, fill, outline, size)
+    return Image.alpha_composite(shadow, base)
 
 
 def build_piece_images(master, size: int = 72) -> dict[str, ImageTk.PhotoImage]:
-    images: dict[str, ImageTk.PhotoImage] = {}
-    for symbol in PIECE_GLYPHS:
-        pil_image = _render_piece(symbol, size)
-        images[symbol] = ImageTk.PhotoImage(pil_image, master=master)
-    return images
+    return {symbol: ImageTk.PhotoImage(_render_piece(symbol, size), master=master) for symbol in PIECE_ORDER}
