@@ -53,6 +53,10 @@ class GameConfig:
     trainer: bool = False
     meme: bool = False
     cheat: bool = False
+    ui_scale: float = 1.0
+    reduce_motion: bool = False
+    high_contrast: bool = False
+    piece_set: str = "Classic"
     engine: EngineConfig = field(default_factory=EngineConfig)
     variant: VariantConfig = field(default_factory=VariantConfig)
     multiplayer: MultiplayerConfig = field(default_factory=MultiplayerConfig)
