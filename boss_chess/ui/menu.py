@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 from boss_chess.types import GameConfig, GameVariant
 
 
@@ -42,55 +44,46 @@ def ask_choice(prompt: str, choices: list[str], default_index: int = 0) -> str:
         print(f"Choose one of: {', '.join(choices)}")
 
 
-def configure_game() -> GameConfig:
+def configure_game(base_config: GameConfig | None = None) -> GameConfig:
+    config = deepcopy(base_config) if base_config is not None else GameConfig()
     print("Choose your modes:")
-    trainer = ask_bool("Enable trainer mode?", False)
-    meme = ask_bool("Enable meme mode?", False)
-    cheat = ask_bool("Enable cheat mode?", False)
-    ai_white = ask_bool("Should the AI play White?", False)
+    config.trainer = ask_bool("Enable trainer mode?", config.trainer)
+    config.meme = ask_bool("Enable meme mode?", config.meme)
+    config.cheat = ask_bool("Enable cheat mode?", config.cheat)
+    config.ai_plays_white = ask_bool("Should the AI play White?", config.ai_plays_white)
 
     print("\nGame variant:")
-    variant_choice = ask_choice("Select variant", ["standard", "chess960", "king_of_the_hill", "three_check", "atomic", "racing_kings"], 0)
-    chess960_seed = 0
+    variant_choice = ask_choice("Select variant", ["standard", "chess960", "king_of_the_hill", "three_check", "atomic", "racing_kings"], config.variant.name.value and ["standard", "chess960", "king_of_the_hill", "three_check", "atomic", "racing_kings"].index(config.variant.name.value))
+    config.variant.name = GameVariant(variant_choice)
     if variant_choice == "chess960":
-        chess960_seed = ask_int("Chess960 seed", 0, 0, 959)
+        config.variant.chess960_seed = ask_int("Chess960 seed", config.variant.chess960_seed, 0, 959)
 
     print("\nMultiplayer:")
-    mp_mode = ask_choice("Multiplayer mode", ["offline", "host", "join"], 0)
-    mp_host = "127.0.0.1"
-    mp_port = 8765
-    mp_username = input("Username [Player] ").strip() or "Player"
+    mp_mode = ask_choice("Multiplayer mode", ["offline", "host", "join"], ["offline", "host", "join"].index(config.multiplayer.mode) if config.multiplayer.mode in {"offline", "host", "join"} else 0)
+    config.multiplayer.mode = mp_mode
+    mp_username = input(f"Username [{config.multiplayer.username}] ").strip() or config.multiplayer.username
+    config.multiplayer.username = mp_username
     if mp_mode == "join":
-        mp_host = input("Host address [127.0.0.1] ").strip() or "127.0.0.1"
-        mp_port = ask_int("Host port", 8765, 1, 65535)
+        config.multiplayer.host = input(f"Host address [{config.multiplayer.host}] ").strip() or config.multiplayer.host
+        config.multiplayer.port = ask_int("Host port", config.multiplayer.port, 1, 65535)
     elif mp_mode == "host":
-        mp_port = ask_int("Listen port", 8765, 1, 65535)
+        config.multiplayer.port = ask_int("Listen port", config.multiplayer.port, 1, 65535)
 
     print("\nStrong AI settings:")
-    depth = ask_int("Search depth (higher = stronger, slower)", 4, 1, 6)
-    use_opening_book = ask_bool("Use the built-in opening book?", True)
-    use_stockfish = ask_bool("Use Stockfish if available?", False)
-    stockfish_path = None
-    if use_stockfish:
-        stockfish_path = input("Stockfish path (blank to use STOCKFISH_PATH): ").strip() or None
-    target_elo = ask_int("Target Elo (approx)", 1800, 400, 3500)
-    multi_pv = ask_int("Analysis lines to show", 3, 1, 5)
+    config.engine.depth = ask_int("Search depth (higher = stronger, slower)", config.engine.depth, 1, 8)
+    config.engine.use_opening_book = ask_bool("Use the built-in opening book?", config.engine.use_opening_book)
+    config.engine.use_stockfish = ask_bool("Use Stockfish if available?", config.engine.use_stockfish)
+    if config.engine.use_stockfish:
+        config.engine.stockfish_path = input(f"Stockfish path [{config.engine.stockfish_path or ''}] ").strip() or config.engine.stockfish_path
+    config.engine.target_elo = ask_int("Target Elo (approx)", config.engine.target_elo, 400, 3500)
+    config.engine.multi_pv = ask_int("Analysis lines to show", config.engine.multi_pv, 1, 5)
 
-    config = GameConfig()
-    config.trainer = trainer
-    config.meme = meme
-    config.cheat = cheat
-    config.ai_plays_white = ai_white
-    config.engine.depth = depth
-    config.engine.use_opening_book = use_opening_book
-    config.engine.use_stockfish = use_stockfish
-    config.engine.stockfish_path = stockfish_path
-    config.engine.target_elo = target_elo
-    config.engine.multi_pv = multi_pv
-    config.variant.name = GameVariant(variant_choice)
-    config.variant.chess960_seed = chess960_seed
-    config.multiplayer.mode = mp_mode
-    config.multiplayer.host = mp_host
-    config.multiplayer.port = mp_port
-    config.multiplayer.username = mp_username
+    print("\nAppearance and accessibility:")
+    config.piece_set = ask_choice("Piece set", ["Classic", "Slate", "Neon"], ["Classic", "Slate", "Neon"].index(config.piece_set) if config.piece_set in {"Classic", "Slate", "Neon"} else 0)
+    config.ui_scale = float(ask_choice("UI scale", ["0.9", "1.0", "1.15", "1.3"], ["0.9", "1.0", "1.15", "1.3"].index(f"{config.ui_scale:g}" if f"{config.ui_scale:g}" in {"0.9", "1.0", "1.15", "1.3"} else "1.0")))
+    config.reduce_motion = ask_bool("Reduce motion?", config.reduce_motion)
+    config.high_contrast = ask_bool("High contrast mode?", config.high_contrast)
+    if config.high_contrast:
+        config.piece_set = "Neon"
+
     return config
