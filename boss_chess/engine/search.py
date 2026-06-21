@@ -122,7 +122,10 @@ class Searcher:
             if is_mate:
                 mating_moves.append(move)
         if mating_moves:
-            move = min(mating_moves, key=lambda mv: mv.uci())
+            move = min(
+                mating_moves,
+                key=lambda mv: (-_piece_value(board.piece_at(mv.from_square).piece_type if board.piece_at(mv.from_square) else 0), mv.uci()),
+            )
             return _RootBundle(best_move=move, best_score=MATE_SCORE, top_lines=[(move, MATE_SCORE)])
 
         entry = self.tt.get(self._key(board))
