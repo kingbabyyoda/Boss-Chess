@@ -5,7 +5,7 @@ from boss_chess.cli import main as cli_main
 
 
 def test_package_version_is_pinned() -> None:
-    assert __version__ == "0.2.0"
+    assert __version__ == "1.0.0"
 
 
 def test_installable_cli_exists() -> None:
