@@ -29,13 +29,31 @@ VARIANT_LABELS = {
 }
 
 
+_VARIANT_ALIASES = {
+    "standard": GameVariant.STANDARD,
+    "chess960": GameVariant.CHESS960,
+    "chess_960": GameVariant.CHESS960,
+    "king_of_the_hill": GameVariant.KING_OF_THE_HILL,
+    "kingofthehill": GameVariant.KING_OF_THE_HILL,
+    "king of the hill": GameVariant.KING_OF_THE_HILL,
+    "three_check": GameVariant.THREE_CHECK,
+    "threecheck": GameVariant.THREE_CHECK,
+    "three-check": GameVariant.THREE_CHECK,
+    "atomic": GameVariant.ATOMIC,
+    "racing_kings": GameVariant.RACING_KINGS,
+    "racingkings": GameVariant.RACING_KINGS,
+    "racing kings": GameVariant.RACING_KINGS,
+}
+
+
 def normalize_variant(value: str | GameVariant) -> GameVariant:
     if isinstance(value, GameVariant):
         return value
-    try:
-        return GameVariant(str(value).strip().lower())
-    except Exception:
-        return GameVariant.STANDARD
+    raw = str(value).strip().lower()
+    key = raw.replace("-", " ").replace("_", " ")
+    key = " ".join(key.split())
+    compact = key.replace(" ", "")
+    return _VARIANT_ALIASES.get(raw) or _VARIANT_ALIASES.get(key) or _VARIANT_ALIASES.get(compact) or GameVariant.STANDARD
 
 
 def variant_label(value: str | GameVariant) -> str:
