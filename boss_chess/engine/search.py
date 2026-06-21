@@ -115,6 +115,7 @@ class Searcher:
             raise ValueError("No legal moves available.")
 
         mating_moves: list[chess.Move] = []
+        enemy_king = board.king(not board.turn)
         for move in legal_moves:
             board.push(move)
             is_mate = board.is_checkmate()
@@ -122,10 +123,13 @@ class Searcher:
             if is_mate:
                 mating_moves.append(move)
         if mating_moves:
-            move = min(
-                mating_moves,
-                key=lambda mv: (-_piece_value(board.piece_at(mv.from_square).piece_type if board.piece_at(mv.from_square) else 0), mv.uci()),
-            )
+            def mate_key(mv: chess.Move) -> tuple[int, int, str]:
+                piece = board.piece_at(mv.from_square)
+                piece_value = _piece_value(piece.piece_type) if piece else 0
+                distance = _king_distance(mv.to_square, enemy_king)
+                return (-piece_value, distance, mv.uci())
+
+            move = min(mating_moves, key=mate_key)
             return _RootBundle(best_move=move, best_score=MATE_SCORE, top_lines=[(move, MATE_SCORE)])
 
         entry = self.tt.get(self._key(board))
@@ -380,6 +384,12 @@ def _piece_value(piece_type: chess.PieceType) -> int:
         chess.QUEEN: 900,
         chess.KING: 0,
     }[piece_type]
+
+
+def _king_distance(square: int, king_square: int | None) -> int:
+    if king_square is None:
+        return 99
+    return max(abs(chess.square_file(square) - chess.square_file(king_square)), abs(chess.square_rank(square) - chess.square_rank(king_square)))
 
 
 def _side_to_move(board: chess.Board) -> int:
