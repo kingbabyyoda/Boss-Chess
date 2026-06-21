@@ -8,7 +8,7 @@ import chess.pgn
 
 from boss_chess.state import GameState
 from boss_chess.types import GameVariant
-from boss_chess.variants import create_board, normalize_variant
+from boss_chess.variants import create_board, normalize_variant, variant_label
 
 
 @dataclass(slots=True)
@@ -25,7 +25,7 @@ def export_pgn(state: GameState, path: Path, headers: dict[str, str] | None = No
         for key, value in headers.items():
             game.headers[key] = value
     game.setup(chess.Board(state.starting_fen))
-    game.headers["Variant"] = normalize_variant(state.variant).value
+    game.headers["Variant"] = variant_label(state.variant)
     if normalize_variant(state.variant) == GameVariant.CHESS960:
         game.headers["Chess960Seed"] = str(state.chess960_seed)
     node = game
