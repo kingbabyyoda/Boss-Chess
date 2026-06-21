@@ -13,7 +13,7 @@ def _position_key(board: chess.Board) -> str:
 
 
 OPENING_BOOK: dict[str, list[str]] = {
-    _position_key(chess.Board()): ["e2e4", "d2d4", "c2c4", "g1f3", "b1c3", "e2e3"],
+    _position_key(chess.Board()): ["e2e4", "d2d4", "c2c4", "g1f3", "b1c3"],
     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -": ["e7e5", "c7c5", "e7e6", "c7c6", "g8f6", "d7d5"],
     "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq -": ["d7d5", "g8f6", "e7e6", "c7c5", "g7g6"],
     "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq -": ["e7e5", "g8f6", "c7c5", "e7e6", "d7d5"],
