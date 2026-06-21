@@ -114,14 +114,16 @@ class Searcher:
         if not legal_moves:
             raise ValueError("No legal moves available.")
 
-        # Prefer the first immediate mate in the natural move-generation order.
-        # This keeps forced-mate tests stable when more than one mate exists.
+        mating_moves: list[chess.Move] = []
         for move in legal_moves:
             board.push(move)
             is_mate = board.is_checkmate()
             board.pop()
             if is_mate:
-                return _RootBundle(best_move=move, best_score=MATE_SCORE, top_lines=[(move, MATE_SCORE)])
+                mating_moves.append(move)
+        if mating_moves:
+            move = min(mating_moves, key=lambda mv: mv.uci())
+            return _RootBundle(best_move=move, best_score=MATE_SCORE, top_lines=[(move, MATE_SCORE)])
 
         entry = self.tt.get(self._key(board))
         root_hint = hash_move or (entry.best_move if entry else None)
@@ -138,7 +140,7 @@ class Searcher:
             board.pop()
             scored.append((move, score))
 
-            if score > best_score:
+            if score > best_score or (score == best_score and move.uci() < best_move.uci()):
                 best_score = score
                 best_move = move
             if score > current_alpha:
@@ -190,7 +192,7 @@ class Searcher:
             score = -self._negamax(board, depth - 1, -beta, -alpha, ply + 1)
             board.pop()
 
-            if score > best_score:
+            if score > best_score or (score == best_score and (best_move is None or move.uci() < best_move.uci())):
                 best_score = score
                 best_move = move
             if score > alpha:
