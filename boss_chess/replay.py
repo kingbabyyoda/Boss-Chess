@@ -24,10 +24,10 @@ def export_pgn(state: GameState, path: Path, headers: dict[str, str] | None = No
     if headers:
         for key, value in headers.items():
             game.headers[key] = value
+    game.setup(chess.Board(state.starting_fen))
     game.headers["Variant"] = normalize_variant(state.variant).value
     if normalize_variant(state.variant) == GameVariant.CHESS960:
         game.headers["Chess960Seed"] = str(state.chess960_seed)
-    game.setup(chess.Board(state.starting_fen))
     node = game
     board = chess.Board(state.starting_fen)
     for move in state.move_history:
