@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   test-and-build:
     name: Test and package (${{ matrix.os }})
@@ -46,3 +49,22 @@ jobs:
           name: boss-chess-${{ matrix.os }}
           path: |
             dist/BossChess*
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: test-and-build
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download packaged apps
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: boss-chess-*
+          merge-multiple: false
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/**/BossChess*
