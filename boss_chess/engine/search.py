@@ -125,6 +125,10 @@ class Searcher:
 
         for move in moves:
             board.push(move)
+            if board.is_checkmate():
+                board.pop()
+                scored.append((move, MATE_SCORE))
+                return _RootBundle(best_move=move, best_score=MATE_SCORE, top_lines=[(move, MATE_SCORE)])
             score = -self._negamax(board, depth - 1, -beta, -current_alpha, ply=1)
             board.pop()
             scored.append((move, score))
