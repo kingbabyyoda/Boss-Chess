@@ -4,67 +4,49 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  test-and-build:
-    name: Test and package (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  build:
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11"]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
 
-      - name: Install dependencies
-        shell: bash
-        run: |
+      - run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest pyinstaller
+          pip install -r requirements.txt pyinstaller pytest
 
-      - name: Run tests
-        shell: bash
-        run: pytest -q
+      - run: pytest -q
 
-      - name: Build standalone executable
-        shell: bash
-        run: |
-          pyinstaller --noconfirm --clean --onefile --name BossChess main.py
+      - run: |
+          pyinstaller --onefile --clean --name BossChess main.py
 
-      - name: Upload packaged app
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: boss-chess-${{ matrix.os }}
-          path: |
-            dist/BossChess*
+          name: BossChess-${{ matrix.os }}
+          path: dist/*
 
-  publish-release:
-    name: Publish GitHub Release
+  release:
+    needs: build
     runs-on: ubuntu-latest
-    needs: test-and-build
-    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - name: Download packaged apps
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: release-assets
-          pattern: boss-chess-*
-          merge-multiple: false
 
-      - name: Publish release assets
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
-          files: release-assets/**/BossChess*
+          generate_release_notes: true
+          files: release-assets/**/*
